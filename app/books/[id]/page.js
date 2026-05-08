@@ -1,15 +1,18 @@
-import { getBookById, getBookTags } from '@/lib/books'
+import { getBookById, getBookTags, getBookCollections } from '@/lib/books'
 import PageShell from '@/app/components/PageShell'
 import TagPicker from '@/app/components/TagPicker'
+import CollectionPicker from '@/app/components/CollectionPicker'
+import ReadStatusPicker from '@/app/components/ReadStatusPicker'
 import BookEditor from '@/app/components/BookEditor'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 export default async function BookPage({ params }) {
   const { id } = await params
-  const [{ data: book, error }, { data: bookTags }] = await Promise.all([
+  const [{ data: book, error }, { data: bookTags }, { data: bookCollections }] = await Promise.all([
     getBookById(id),
     getBookTags(id),
+    getBookCollections(id),
   ])
 
   if (error || !book) return notFound()
@@ -146,6 +149,76 @@ export default async function BookPage({ params }) {
           background: transparent; border: none; cursor: pointer; padding: 0;
         }
         .cancel-btn:hover { color: #1a1814; }
+
+        /* ── COLLECTION PICKER ── */
+        .collection-picker-wrap { margin-top: 2.5rem; }
+        .cp-label {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 400;
+          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e;
+          margin-bottom: 0.75rem;
+        }
+        .cp-active { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+        .cp-chip {
+          font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 400;
+          letter-spacing: 0.08em; padding: 0.35rem 0.8rem;
+          border: 1px solid #d4cfc8; color: #4a443c;
+        }
+        .cp-chip.active { border-color: #1a1814; color: #1a1814; }
+        .cp-toggle {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
+          letter-spacing: 0.1em; text-transform: uppercase; color: #9c8e7e;
+          background: transparent; border: none; cursor: pointer; padding: 0;
+        }
+        .cp-toggle:hover { color: #1a1814; }
+        .cp-panel {
+          margin-top: 1.5rem; padding: 1.5rem;
+          border: 1px solid #d4cfc8; background: #faf8f4;
+        }
+        .cp-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .cp-item {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
+          padding: 0.3rem 0.7rem; border: 1px solid #d4cfc8;
+          background: transparent; color: #6b6058; cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .cp-item:hover { border-color: #1a1814; }
+        .cp-item.selected { border-color: #1a1814; color: #1a1814; background: rgba(26,24,20,0.03); }
+        .cp-new-form {
+          display: flex; gap: 0.5rem; align-items: flex-end;
+          margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e8e4de;
+        }
+        .cp-new-form input {
+          font-family: 'DM Mono', monospace; font-size: 0.7rem;
+          color: #1a1814; background: transparent; border: none;
+          border-bottom: 1px solid #d4cfc8; padding: 0.3rem 0;
+          outline: none; width: 180px;
+        }
+        .cp-new-form input:focus { border-bottom-color: #e8694a; }
+        .cp-new-form input::placeholder { color: #c8c2ba; }
+        .cp-new-form button {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem;
+          letter-spacing: 0.1em; text-transform: uppercase;
+          color: #f7f4ef; background: #1a1814; border: none;
+          padding: 0.4rem 0.8rem; cursor: pointer;
+        }
+        .cp-new-form button:hover { background: #e8694a; }
+
+        /* ── READ STATUS ── */
+        .rs-wrap { margin-top: 2.5rem; }
+        .rs-label {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 400;
+          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e;
+          margin-bottom: 0.75rem;
+        }
+        .rs-options { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .rs-btn {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
+          letter-spacing: 0.08em; padding: 0.35rem 0.8rem;
+          border: 1px solid #d4cfc8; background: transparent;
+          color: #6b6058; cursor: pointer; transition: all 0.15s ease;
+        }
+        .rs-btn:hover { border-color: #1a1814; }
+        .rs-btn.active { border-color: #e8694a; color: #e8694a; background: rgba(232,105,74,0.05); }
       `}</style>
 
       <div className="book-header">
@@ -230,9 +303,13 @@ export default async function BookPage({ params }) {
         </div>
       </div>
 
-      <BookEditor book={book} authors={authors} publisher={publisher} />
+      <ReadStatusPicker bookId={id} initialStatus={book.read_status} />
+
+      <CollectionPicker bookId={id} initialCollections={bookCollections} />
 
       <TagPicker bookId={id} initialTags={bookTags} />
+
+      <BookEditor book={book} authors={authors} publisher={publisher} />
 
       {book.notes && (
         <div className="notes-section">

@@ -100,7 +100,7 @@ export default async function Home() {
       `}</style>
 
       <div className="hero">
-        <h1>Athenaeum</h1>
+        <h1>Athenaeum Deipnon</h1>
         <p>Cookbook Library · Personal Collection</p>
       </div>
 
