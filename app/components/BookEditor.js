@@ -13,7 +13,7 @@ const FIELDS = [
   { key: 'format', label: 'Format' },
   { key: 'language', label: 'Language' },
   { key: 'country_of_origin', label: 'Country' },
-  { key: 'condition', label: 'Condition' },
+  { key: 'condition', label: 'Condition', select: ['', 'mint', 'very_good', 'good', 'fair', 'poor'] },
   { key: 'dimensions', label: 'Dimensions' },
   { key: 'isbn_13', label: 'ISBN-13' },
   { key: 'isbn_10', label: 'ISBN-10' },
@@ -79,7 +79,16 @@ export default function BookEditor({ book, authors, publisher }) {
         {FIELDS.map(f => (
           <div key={f.key} className={`editor-field${f.full ? ' full' : ''}`}>
             <label>{f.label}{f.required ? ' *' : ''}</label>
-            {f.textarea ? (
+            {f.select ? (
+              <select
+                value={form[f.key]}
+                onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+              >
+                {f.select.map(v => (
+                  <option key={v} value={v}>{v ? v.replace(/_/g, ' ') : '—'}</option>
+                ))}
+              </select>
+            ) : f.textarea ? (
               <textarea
                 value={form[f.key]}
                 onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}

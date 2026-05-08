@@ -125,7 +125,12 @@ export default async function BookPage({ params }) {
           border: 1px solid #d4cfc8; padding: 0.5rem; resize: vertical;
           font-size: 0.95rem; line-height: 1.5;
         }
-        .editor-field input:focus, .editor-field textarea:focus { border-color: #e8694a; }
+        .editor-field select {
+          font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: #1a1814;
+          background: transparent; border: none; border-bottom: 1px solid #d4cfc8;
+          padding: 0.3rem 0; outline: none; width: 100%;
+        }
+        .editor-field input:focus, .editor-field textarea:focus, .editor-field select:focus { border-color: #e8694a; }
         .editor-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
         .save-btn {
           font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 400;
