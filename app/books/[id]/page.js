@@ -106,6 +106,19 @@ export default async function BookPage({ params }) {
           color: #e8694a;
         }
 
+        .book-header-layout {
+          display: flex;
+          gap: 2rem;
+          margin-top: -0.5rem;
+        }
+
+        .book-cover {
+          width: 140px;
+          flex-shrink: 0;
+          border-radius: 2px;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+        }
+
         .notes-section {
           margin-top: 3rem;
           padding-top: 2rem;
@@ -134,9 +147,16 @@ export default async function BookPage({ params }) {
       <div className="page">
         <header className="header">
           <Link href="/" className="back-link">← Athenaeum</Link>
-          <h1 className="book-title">{book.title}</h1>
-          {book.subtitle && <p className="book-subtitle">{book.subtitle}</p>}
-          <p className="book-author">{authors}</p>
+          <div className="book-header-layout">
+            {book.cover_image_url && (
+              <img src={book.cover_image_url} alt={book.title} className="book-cover" />
+            )}
+            <div>
+              <h1 className="book-title">{book.title}</h1>
+              {book.subtitle && <p className="book-subtitle">{book.subtitle}</p>}
+              <p className="book-author">{authors}</p>
+            </div>
+          </div>
         </header>
 
         <div className="detail-grid">
