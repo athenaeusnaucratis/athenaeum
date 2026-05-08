@@ -1,11 +1,15 @@
-import { getBookById } from '@/lib/books'
+import { getBookById, getBookTags } from '@/lib/books'
 import PageShell from '@/app/components/PageShell'
+import TagPicker from '@/app/components/TagPicker'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 export default async function BookPage({ params }) {
   const { id } = await params
-  const { data: book, error } = await getBookById(id)
+  const [{ data: book, error }, { data: bookTags }] = await Promise.all([
+    getBookById(id),
+    getBookTags(id),
+  ])
 
   if (error || !book) return notFound()
 
@@ -169,6 +173,8 @@ export default async function BookPage({ params }) {
           }
         </div>
       </div>
+
+      <TagPicker bookId={id} initialTags={bookTags} />
 
       {book.notes && (
         <div className="notes-section">
