@@ -1,6 +1,7 @@
 import { getBookById, getBookTags } from '@/lib/books'
 import PageShell from '@/app/components/PageShell'
 import TagPicker from '@/app/components/TagPicker'
+import BookEditor from '@/app/components/BookEditor'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -90,6 +91,56 @@ export default async function BookPage({ params }) {
           font-family: 'Cormorant Garamond', serif; font-size: 1rem;
           line-height: 1.6; color: #4a443c;
         }
+
+        /* ── EDITOR ── */
+        .edit-btn {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
+          letter-spacing: 0.1em; text-transform: uppercase; color: #9c8e7e;
+          background: transparent; border: none; cursor: pointer; padding: 0;
+          margin-top: 2.5rem;
+        }
+        .edit-btn:hover { color: #1a1814; }
+
+        .editor-panel { margin-top: 2.5rem; }
+        .editor-error {
+          font-family: 'DM Mono', monospace; font-size: 0.7rem; color: #c0392b;
+          margin-bottom: 1rem;
+        }
+        .editor-grid {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem 2rem;
+        }
+        .editor-field { display: flex; flex-direction: column; gap: 0.35rem; }
+        .editor-field.full { grid-column: 1 / -1; }
+        .editor-field label {
+          font-family: 'DM Mono', monospace; font-size: 0.55rem; font-weight: 400;
+          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e;
+        }
+        .editor-field input, .editor-field textarea {
+          font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: #1a1814;
+          background: transparent; border: none; border-bottom: 1px solid #d4cfc8;
+          padding: 0.3rem 0; outline: none; width: 100%;
+          transition: border-color 0.15s ease;
+        }
+        .editor-field textarea {
+          border: 1px solid #d4cfc8; padding: 0.5rem; resize: vertical;
+          font-size: 0.95rem; line-height: 1.5;
+        }
+        .editor-field input:focus, .editor-field textarea:focus { border-color: #e8694a; }
+        .editor-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
+        .save-btn {
+          font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 400;
+          letter-spacing: 0.1em; text-transform: uppercase; color: #f7f4ef;
+          background: #1a1814; border: none; padding: 0.6rem 1.2rem; cursor: pointer;
+          transition: background 0.15s ease;
+        }
+        .save-btn:hover { background: #e8694a; }
+        .save-btn:disabled { opacity: 0.5; cursor: default; }
+        .cancel-btn {
+          font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 300;
+          letter-spacing: 0.1em; text-transform: uppercase; color: #9c8e7e;
+          background: transparent; border: none; cursor: pointer; padding: 0;
+        }
+        .cancel-btn:hover { color: #1a1814; }
       `}</style>
 
       <div className="book-header">
@@ -173,6 +224,8 @@ export default async function BookPage({ params }) {
           }
         </div>
       </div>
+
+      <BookEditor book={book} authors={authors} publisher={publisher} />
 
       <TagPicker bookId={id} initialTags={bookTags} />
 
