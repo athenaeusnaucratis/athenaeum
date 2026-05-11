@@ -74,15 +74,17 @@ export default function AddBookFlow() {
   async function lookUpIsbn(isbn) {
     setStage('looking_up')
     setError(null)
+    // Strip any non-digit characters
+    const clean = isbn.replace(/[^0-9Xx]/g, '')
     try {
-      const res = await fetch(`/api/isbn/${isbn}`)
-      if (!res.ok) throw new Error('ISBN not found in Google Books.')
+      const res = await fetch(`/api/isbn/${clean}`)
+      if (!res.ok) throw new Error(`Scanned "${clean}" — not found in Google Books.`)
       const data = await res.json()
       setForm({ ...EMPTY_FORM, ...data })
       setCaptureMethod('barcode_scan')
     } catch (e) {
       setError(e.message)
-      setForm({ ...EMPTY_FORM, isbn_13: isbn.length === 13 ? isbn : '', isbn_10: isbn.length === 10 ? isbn : '' })
+      setForm({ ...EMPTY_FORM, isbn_13: clean.length === 13 ? clean : '', isbn_10: clean.length === 10 ? clean : '' })
       setCaptureMethod('barcode_scan')
     }
     setStage('confirm')
