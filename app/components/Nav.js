@@ -3,9 +3,10 @@ import Link from 'next/link'
 export default function Nav({ active }) {
   const links = [
     { href: '/', label: 'Home' },
-    { href: '/collection', label: 'Collection' },
+    { href: '/collection', label: 'Books' },
     { href: '/authors', label: 'Authors' },
     { href: '/genre', label: 'Category' },
+    { href: '/collections', label: 'Collections' },
     { href: '/add', label: '+ Add' },
   ]
 

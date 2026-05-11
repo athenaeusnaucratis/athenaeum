@@ -110,9 +110,10 @@ export default async function Home() {
       </div>
 
       <div className="quick-links">
-        <Link href="/collection" className="quick-link primary">Collection</Link>
+        <Link href="/collection" className="quick-link primary">Books</Link>
         <Link href="/authors" className="quick-link">Authors</Link>
         <Link href="/genre" className="quick-link">Category</Link>
+        <Link href="/collections" className="quick-link">Collections</Link>
         <Link href="/add" className="quick-link">+ Add</Link>
       </div>
     </PageShell>

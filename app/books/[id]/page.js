@@ -1,10 +1,10 @@
 import { getBookById, getBookTags, getBookCollections } from '@/lib/books'
 import PageShell from '@/app/components/PageShell'
 import TagPicker from '@/app/components/TagPicker'
-import CollectionPicker from '@/app/components/CollectionPicker'
 import ReadStatusPicker from '@/app/components/ReadStatusPicker'
 import BookEditor from '@/app/components/BookEditor'
 import ValuePanel from '@/app/components/ValuePanel'
+import CollectionPicker from '@/app/components/CollectionPicker'
 import DeleteBook from '@/app/components/DeleteBook'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -308,7 +308,7 @@ export default async function BookPage({ params }) {
       `}</style>
 
       <div className="book-header">
-        <Link href="/collection" className="back-link">← Collection</Link>
+        <Link href="/collection" className="back-link">← Books</Link>
         <div className="book-header-layout">
           {book.cover_image_url && (
             <img src={book.cover_image_url} alt={book.title} className="book-cover" />

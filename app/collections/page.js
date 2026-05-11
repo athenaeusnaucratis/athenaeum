@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase'
 import PageShell from '@/app/components/PageShell'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function CollectionsPage() {
   const { data: collections, error } = await getAllCollections()
 

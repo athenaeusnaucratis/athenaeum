@@ -234,7 +234,7 @@ export default async function CollectionPage() {
 
       <div className="collection-header">
         <div>
-          <h1 className="page-title">Collection</h1>
+          <h1 className="page-title">Books</h1>
         </div>
         <span className="header-count">{books.length} books</span>
       </div>
