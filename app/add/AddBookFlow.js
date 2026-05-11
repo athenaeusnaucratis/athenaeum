@@ -86,7 +86,7 @@ export default function AddBookFlow() {
     const clean = isbn.replace(/[^0-9Xx]/g, '')
     try {
       const res = await fetch(`/api/isbn/${clean}`)
-      if (!res.ok) throw new Error(`Scanned "${clean}" — not found in Google Books.`)
+      if (!res.ok) throw new Error(`Scanned "${clean}" — not found in Google Books or Open Library.`)
       const data = await res.json()
       setForm({ ...EMPTY_FORM, ...data })
       setCaptureMethod('barcode_scan')
