@@ -150,6 +150,12 @@ export default function AddBookFlow() {
         body: JSON.stringify({ ...form, capture_method: captureMethod }),
       })
       const json = await res.json()
+      if (res.status === 409 && json.duplicate_id) {
+        setNewBookId(json.duplicate_id)
+        setError(`Duplicate: ${json.error}`)
+        setStage('done')
+        return
+      }
       if (!res.ok) throw new Error(json.error ?? 'Failed to save.')
       const bookId = json.id
       setNewBookId(bookId)
@@ -311,7 +317,10 @@ export default function AddBookFlow() {
 
   if (stage === 'done') return (
     <div className="flow-center">
-      <p className="flow-success">Book saved.</p>
+      {error
+        ? <p className="flow-error">{error}</p>
+        : <p className="flow-success">Book saved.</p>
+      }
       <div className="flow-buttons">
         <Link href={`/books/${newBookId}`} className="btn-primary">View Book</Link>
         <button className="btn-secondary" onClick={() => {
