@@ -22,55 +22,55 @@ export default async function CollectionsPage() {
     <PageShell active="/collections">
       <style>{`
         .shelves-header {
-          margin-top: 2rem;
+          margin-top: 2.5rem;
           padding-bottom: 1rem;
-          border-bottom: 1px solid #d4cfc8;
+          border-bottom: 1px solid #e0e0e0;
         }
 
-        .shelf-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 1.5rem;
-          margin-top: 2rem;
+        .shelf-list {
+          margin-top: 1.5rem;
         }
 
-        .shelf-card {
+        .shelf-item {
           text-decoration: none;
           color: inherit;
-          padding: 1.5rem;
-          border: 1px solid #e8e4de;
-          transition: all 0.15s ease;
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          padding: 1rem 0;
+          border-bottom: 1px solid #f0f0f0;
+          transition: background 0.1s ease;
         }
-        .shelf-card:hover { border-color: #e8694a; }
+        .shelf-item:hover { background: #fafafa; }
 
         .shelf-name {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 1.4rem;
-          font-weight: 600;
-          color: #1a1814;
+          font-size: 1.1rem;
+          font-weight: 500;
+          color: #2c2c2c;
         }
 
         .shelf-desc {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           font-style: italic;
-          color: #9c8e7e;
-          margin-top: 0.3rem;
+          color: #999;
+          margin-left: 1rem;
         }
 
         .shelf-count {
           font-family: 'DM Mono', monospace;
           font-size: 0.65rem;
           font-weight: 300;
-          color: #e8694a;
-          margin-top: 0.75rem;
+          color: #999;
+          flex-shrink: 0;
         }
 
         .empty-state {
           font-family: 'Cormorant Garamond', serif;
           font-size: 1rem;
           font-style: italic;
-          color: #9c8e7e;
+          color: #999;
           margin-top: 3rem;
         }
       `}</style>
@@ -81,12 +81,14 @@ export default async function CollectionsPage() {
       </div>
 
       {collections?.length > 0 ? (
-        <div className="shelf-grid">
+        <div className="shelf-list">
           {collections.map(col => (
-            <Link key={col.id} href={`/collections/${col.id}`} className="shelf-card">
-              <div className="shelf-name">{col.name}</div>
-              {col.description && <div className="shelf-desc">{col.description}</div>}
-              <div className="shelf-count">{countMap[col.id] ?? 0} books</div>
+            <Link key={col.id} href={`/collections/${col.id}`} className="shelf-item">
+              <div>
+                <span className="shelf-name">{col.name}</span>
+                {col.description && <span className="shelf-desc">{col.description}</span>}
+              </div>
+              <span className="shelf-count">{countMap[col.id] ?? 0}</span>
             </Link>
           ))}
         </div>

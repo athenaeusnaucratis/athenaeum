@@ -14,70 +14,61 @@ export default async function CollectionDetailPage({ params }) {
   return (
     <PageShell active="/collections">
       <style>{`
+        .back-link {
+          font-family: 'DM Mono', monospace;
+          font-size: 0.65rem; font-weight: 300;
+          color: #999; text-decoration: none;
+          display: inline-block; margin-top: 2.5rem;
+        }
+        .back-link:hover { color: #2c2c2c; }
+
         .col-header {
-          margin-top: 2rem;
+          margin-top: 1rem;
           padding-bottom: 1rem;
-          border-bottom: 1px solid #d4cfc8;
+          border-bottom: 1px solid #e0e0e0;
           display: flex;
-          align-items: flex-end;
+          align-items: baseline;
           justify-content: space-between;
         }
 
         .col-desc {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 1rem; font-style: italic; color: #9c8e7e;
-          margin-top: 0.3rem;
+          font-size: 0.95rem; font-style: italic; color: #999;
+          margin-top: 0.25rem;
         }
 
         .col-count {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 3rem; font-weight: 400; font-style: italic;
-          color: #e8694a; line-height: 1;
+          font-family: 'DM Mono', monospace;
+          font-size: 0.75rem; font-weight: 300;
+          color: #999;
         }
 
-        .back-link {
+        .book-list { margin-top: 0; }
+
+        .book-item {
+          text-decoration: none; color: inherit;
+          display: flex; align-items: baseline;
+          justify-content: space-between;
+          padding: 0.75rem 0;
+          border-bottom: 1px solid #f0f0f0;
+        }
+        .book-item:hover { background: #fafafa; }
+
+        .book-item-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1rem; font-weight: 500; color: #2c2c2c;
+        }
+
+        .book-item-author {
           font-family: 'DM Mono', monospace;
           font-size: 0.65rem; font-weight: 300;
-          letter-spacing: 0.14em; text-transform: uppercase;
-          color: #9c8e7e; text-decoration: none;
-          display: inline-block; margin-top: 2rem;
-        }
-        .back-link:hover { color: #1a1814; }
-
-        .book-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-          gap: 1.5rem; margin-top: 2rem;
-        }
-
-        .book-card {
-          text-decoration: none; color: inherit;
-          padding: 1.25rem; border: 1px solid #e8e4de;
-          transition: all 0.15s ease;
-        }
-        .book-card:hover { border-color: #e8694a; }
-
-        .book-card-cover {
-          width: 100%; height: 160px; object-fit: cover;
-          border-radius: 1px; margin-bottom: 1rem;
-        }
-
-        .book-card-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 1.05rem; font-weight: 600; color: #1a1814; line-height: 1.3;
-        }
-        .book-card-subtitle {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 0.85rem; font-style: italic; color: #9c8e7e; margin-top: 0.15rem;
-        }
-        .book-card-author {
-          font-family: 'DM Mono', monospace;
-          font-size: 0.65rem; font-weight: 300; color: #6b6058; margin-top: 0.5rem;
+          color: #999; flex-shrink: 0; margin-left: 1rem;
         }
 
         .empty-col {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 1rem; font-style: italic; color: #9c8e7e; margin-top: 2rem;
+          font-size: 1rem; font-style: italic;
+          color: #999; margin-top: 2rem;
         }
       `}</style>
 
@@ -88,21 +79,17 @@ export default async function CollectionDetailPage({ params }) {
           <h1 className="page-title">{collection.name}</h1>
           {collection.description && <p className="col-desc">{collection.description}</p>}
         </div>
-        <span className="col-count">{books?.length ?? 0}</span>
+        <span className="col-count">{books?.length ?? 0} books</span>
       </div>
 
       {books?.length > 0 ? (
-        <div className="book-grid">
+        <div className="book-list">
           {books.map(book => (
-            <Link key={book.id} href={`/books/${book.id}`} className="book-card">
-              {book.cover_image_url && (
-                <img src={book.cover_image_url} alt={book.title} className="book-card-cover" />
-              )}
-              <div className="book-card-title">{book.title}</div>
-              {book.subtitle && <div className="book-card-subtitle">{book.subtitle}</div>}
-              <div className="book-card-author">
+            <Link key={book.id} href={`/books/${book.id}`} className="book-item">
+              <span className="book-item-title">{book.title}</span>
+              <span className="book-item-author">
                 {book.authors?.[0]?.authors?.full_name ?? '—'}
-              </div>
+              </span>
             </Link>
           ))}
         </div>

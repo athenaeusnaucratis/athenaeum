@@ -26,9 +26,9 @@ export default async function GenrePage() {
     <PageShell active="/genre">
       <style>{`
         .genre-header {
-          margin-top: 2rem;
+          margin-top: 2.5rem;
           padding-bottom: 1rem;
-          border-bottom: 1px solid #d4cfc8;
+          border-bottom: 1px solid #e0e0e0;
         }
 
         .type-section {
@@ -39,39 +39,39 @@ export default async function GenrePage() {
           font-family: 'DM Mono', monospace;
           font-size: 0.6rem;
           font-weight: 400;
-          letter-spacing: 0.14em;
+          letter-spacing: 0.08em;
           text-transform: uppercase;
-          color: #9c8e7e;
-          margin-bottom: 1rem;
+          color: #999;
+          margin-bottom: 0.75rem;
         }
 
         .tag-grid {
           display: flex;
           flex-wrap: wrap;
-          gap: 0.75rem;
+          gap: 0.5rem;
         }
 
         .tag-card {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 1.05rem;
-          font-weight: 600;
-          color: #1a1814;
+          font-family: 'DM Mono', monospace;
+          font-size: 0.7rem;
+          font-weight: 300;
+          color: #666;
           text-decoration: none;
-          padding: 0.8rem 1.4rem;
-          border: 1px solid #d4cfc8;
+          padding: 0.5rem 1rem;
+          border: 1px solid #e0e0e0;
           transition: all 0.15s ease;
         }
 
         .tag-card:hover {
-          border-color: #e8694a;
-          color: #e8694a;
+          border-color: #2c2c2c;
+          color: #2c2c2c;
         }
 
         .empty-state {
           font-family: 'Cormorant Garamond', serif;
           font-size: 1rem;
           font-style: italic;
-          color: #9c8e7e;
+          color: #999;
           margin-top: 3rem;
         }
       `}</style>

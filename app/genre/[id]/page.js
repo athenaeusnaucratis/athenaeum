@@ -20,104 +20,62 @@ export default async function TagDetailPage({ params }) {
   return (
     <PageShell active="/genre">
       <style>{`
+        .back-link {
+          font-family: 'DM Mono', monospace;
+          font-size: 0.65rem; font-weight: 300;
+          color: #999; text-decoration: none;
+          display: inline-block; margin-top: 2.5rem;
+        }
+        .back-link:hover { color: #2c2c2c; }
+
         .tag-header {
-          margin-top: 2rem;
+          margin-top: 1rem;
           padding-bottom: 1rem;
-          border-bottom: 1px solid #d4cfc8;
+          border-bottom: 1px solid #e0e0e0;
           display: flex;
-          align-items: flex-end;
+          align-items: baseline;
           justify-content: space-between;
         }
 
         .tag-type {
           font-family: 'DM Mono', monospace;
-          font-size: 0.6rem;
-          font-weight: 400;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-          color: #9c8e7e;
-          margin-bottom: 0.3rem;
+          font-size: 0.6rem; font-weight: 400;
+          letter-spacing: 0.08em; text-transform: uppercase;
+          color: #999; margin-bottom: 0.3rem;
         }
 
         .tag-count {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 3rem;
-          font-weight: 400;
-          font-style: italic;
-          color: #e8694a;
-          line-height: 1;
-        }
-
-        .back-link {
           font-family: 'DM Mono', monospace;
-          font-size: 0.65rem;
-          font-weight: 300;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-          color: #9c8e7e;
-          text-decoration: none;
-          display: inline-block;
-          margin-top: 2rem;
-        }
-        .back-link:hover { color: #1a1814; }
-
-        .book-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-          gap: 1.5rem;
-          margin-top: 2rem;
+          font-size: 0.75rem; font-weight: 300;
+          color: #999;
         }
 
-        .book-card {
-          text-decoration: none;
-          color: inherit;
-          padding: 1.25rem;
-          border: 1px solid #e8e4de;
-          transition: all 0.15s ease;
-        }
+        .book-list { margin-top: 0; }
 
-        .book-card:hover {
-          border-color: #e8694a;
+        .book-item {
+          text-decoration: none; color: inherit;
+          display: flex; align-items: baseline;
+          justify-content: space-between;
+          padding: 0.75rem 0;
+          border-bottom: 1px solid #f0f0f0;
         }
+        .book-item:hover { background: #fafafa; }
 
-        .book-card-cover {
-          width: 100%;
-          height: 160px;
-          object-fit: cover;
-          border-radius: 1px;
-          margin-bottom: 1rem;
-        }
-
-        .book-card-title {
+        .book-item-title {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 1.05rem;
-          font-weight: 600;
-          color: #1a1814;
-          line-height: 1.3;
+          font-size: 1rem; font-weight: 500; color: #2c2c2c;
         }
 
-        .book-card-subtitle {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 0.85rem;
-          font-style: italic;
-          color: #9c8e7e;
-          margin-top: 0.15rem;
-        }
-
-        .book-card-author {
+        .book-item-author {
           font-family: 'DM Mono', monospace;
-          font-size: 0.65rem;
-          font-weight: 300;
-          color: #6b6058;
-          margin-top: 0.5rem;
+          font-size: 0.65rem; font-weight: 300;
+          color: #999; flex-shrink: 0; margin-left: 1rem;
         }
 
         .empty-tag {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 1rem;
-          font-style: italic;
-          color: #9c8e7e;
-          margin-top: 2rem;
+          font-size: 1rem; font-style: italic;
+          color: #999; margin-top: 2rem;
         }
       `}</style>
 
@@ -128,21 +86,17 @@ export default async function TagDetailPage({ params }) {
           <p className="tag-type">{tag.type}</p>
           <h1 className="page-title">{tag.name}</h1>
         </div>
-        <span className="tag-count">{books?.length ?? 0}</span>
+        <span className="tag-count">{books?.length ?? 0} books</span>
       </div>
 
       {books?.length > 0 ? (
-        <div className="book-grid">
+        <div className="book-list">
           {books.map(book => (
-            <Link key={book.id} href={`/books/${book.id}`} className="book-card">
-              {book.cover_image_url && (
-                <img src={book.cover_image_url} alt={book.title} className="book-card-cover" />
-              )}
-              <div className="book-card-title">{book.title}</div>
-              {book.subtitle && <div className="book-card-subtitle">{book.subtitle}</div>}
-              <div className="book-card-author">
+            <Link key={book.id} href={`/books/${book.id}`} className="book-item">
+              <span className="book-item-title">{book.title}</span>
+              <span className="book-item-author">
                 {book.authors?.[0]?.authors?.full_name ?? '—'}
-              </div>
+              </span>
             </Link>
           ))}
         </div>

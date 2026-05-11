@@ -25,264 +25,258 @@ export default async function BookPage({ params }) {
     <PageShell active="/collection">
       <style>{`
         .book-header {
-          margin-top: 2rem;
+          margin-top: 2.5rem;
           padding-bottom: 2rem;
-          border-bottom: 1px solid #d4cfc8;
+          border-bottom: 1px solid #e0e0e0;
         }
 
         .back-link {
           font-family: 'DM Mono', monospace;
           font-size: 0.65rem;
           font-weight: 300;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-          color: #9c8e7e;
+          color: #999;
           text-decoration: none;
           display: inline-block;
           margin-bottom: 1.5rem;
         }
-        .back-link:hover { color: #1a1814; }
+        .back-link:hover { color: #2c2c2c; }
 
         .book-title {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 3rem; font-weight: 600; line-height: 1.1;
-          letter-spacing: -0.02em; color: #1a1814;
+          font-size: 2.2rem; font-weight: 500; line-height: 1.15;
+          color: #2c2c2c;
         }
         .book-subtitle {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 1.4rem; font-style: italic; color: #9c8e7e; margin-top: 0.4rem;
+          font-size: 1.2rem; font-style: italic; color: #999; margin-top: 0.3rem;
         }
         .book-author {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 1.1rem; color: #4a443c; margin-top: 0.75rem;
+          font-size: 1rem; color: #666; margin-top: 0.5rem;
         }
 
         .book-header-layout { display: flex; gap: 2rem; }
         .book-cover {
-          width: 140px; flex-shrink: 0; border-radius: 2px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+          width: 120px; flex-shrink: 0;
         }
 
         .detail-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 2rem; margin-top: 3rem;
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          gap: 1.5rem; margin-top: 2.5rem;
         }
         .detail-item label {
           font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 400;
-          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e;
-          display: block; margin-bottom: 0.35rem;
+          letter-spacing: 0.08em; text-transform: uppercase; color: #999;
+          display: block; margin-bottom: 0.25rem;
         }
         .detail-item span {
-          font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: #1a1814;
+          font-family: 'Cormorant Garamond', serif; font-size: 0.95rem; color: #2c2c2c;
         }
         .detail-item span.mono {
           font-family: 'DM Mono', monospace; font-size: 0.8rem; font-weight: 300;
         }
         .detail-item span.value {
-          font-family: 'DM Mono', monospace; font-size: 0.8rem; color: #e8694a;
+          font-family: 'DM Mono', monospace; font-size: 0.8rem; color: #2c2c2c;
         }
 
         .notes-section {
-          margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #d4cfc8;
+          margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid #e0e0e0;
         }
         .notes-section label {
           font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 400;
-          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e;
-          display: block; margin-bottom: 0.75rem;
+          letter-spacing: 0.08em; text-transform: uppercase; color: #999;
+          display: block; margin-bottom: 0.5rem;
         }
         .notes-section p {
           font-family: 'Cormorant Garamond', serif; font-size: 1rem;
-          line-height: 1.6; color: #4a443c;
+          line-height: 1.6; color: #666;
         }
 
         /* ── EDITOR ── */
         .edit-btn {
           font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
-          letter-spacing: 0.1em; text-transform: uppercase; color: #9c8e7e;
-          background: transparent; border: none; cursor: pointer; padding: 0;
+          color: #999; background: transparent; border: none; cursor: pointer; padding: 0;
           margin-top: 2.5rem;
         }
-        .edit-btn:hover { color: #1a1814; }
+        .edit-btn:hover { color: #2c2c2c; }
 
         .editor-panel { margin-top: 2.5rem; }
         .editor-error {
-          font-family: 'DM Mono', monospace; font-size: 0.7rem; color: #c0392b;
+          font-family: 'DM Mono', monospace; font-size: 0.7rem; color: #c45a3c;
           margin-bottom: 1rem;
         }
         .editor-grid {
           display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem 2rem;
         }
-        .editor-field { display: flex; flex-direction: column; gap: 0.35rem; }
+        .editor-field { display: flex; flex-direction: column; gap: 0.3rem; }
         .editor-field.full { grid-column: 1 / -1; }
         .editor-field label {
           font-family: 'DM Mono', monospace; font-size: 0.55rem; font-weight: 400;
-          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e;
+          letter-spacing: 0.08em; text-transform: uppercase; color: #999;
         }
         .editor-field input, .editor-field textarea {
-          font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: #1a1814;
-          background: transparent; border: none; border-bottom: 1px solid #d4cfc8;
+          font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: #2c2c2c;
+          background: transparent; border: none; border-bottom: 1px solid #e0e0e0;
           padding: 0.3rem 0; outline: none; width: 100%;
           transition: border-color 0.15s ease;
         }
         .editor-field textarea {
-          border: 1px solid #d4cfc8; padding: 0.5rem; resize: vertical;
+          border: 1px solid #e0e0e0; padding: 0.5rem; resize: vertical;
           font-size: 0.95rem; line-height: 1.5;
         }
         .editor-field select {
-          font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: #1a1814;
-          background: transparent; border: none; border-bottom: 1px solid #d4cfc8;
+          font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: #2c2c2c;
+          background: transparent; border: none; border-bottom: 1px solid #e0e0e0;
           padding: 0.3rem 0; outline: none; width: 100%;
         }
-        .editor-field input:focus, .editor-field textarea:focus, .editor-field select:focus { border-color: #e8694a; }
+        .editor-field input:focus, .editor-field textarea:focus, .editor-field select:focus { border-color: #2c2c2c; }
         .editor-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
         .save-btn {
           font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 400;
-          letter-spacing: 0.1em; text-transform: uppercase; color: #f7f4ef;
-          background: #1a1814; border: none; padding: 0.6rem 1.2rem; cursor: pointer;
+          letter-spacing: 0.06em; text-transform: uppercase; color: #fff;
+          background: #2c2c2c; border: none; padding: 0.6rem 1.2rem; cursor: pointer;
           transition: background 0.15s ease;
         }
-        .save-btn:hover { background: #e8694a; }
-        .save-btn:disabled { opacity: 0.5; cursor: default; }
+        .save-btn:hover { background: #c45a3c; }
+        .save-btn:disabled { opacity: 0.4; cursor: default; }
         .cancel-btn {
           font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 300;
-          letter-spacing: 0.1em; text-transform: uppercase; color: #9c8e7e;
-          background: transparent; border: none; cursor: pointer; padding: 0;
+          color: #999; background: transparent; border: none; cursor: pointer; padding: 0;
         }
-        .cancel-btn:hover { color: #1a1814; }
+        .cancel-btn:hover { color: #2c2c2c; }
 
         /* ── COLLECTION PICKER ── */
         .collection-picker-wrap { margin-top: 2.5rem; }
         .cp-label {
           font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 400;
-          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e;
+          letter-spacing: 0.08em; text-transform: uppercase; color: #999;
           margin-bottom: 0.75rem;
         }
         .cp-active { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
         .cp-chip {
           font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 400;
-          letter-spacing: 0.08em; padding: 0.35rem 0.8rem;
-          border: 1px solid #d4cfc8; color: #4a443c;
+          padding: 0.3rem 0.7rem;
+          border: 1px solid #e0e0e0; color: #666;
         }
-        .cp-chip.active { border-color: #1a1814; color: #1a1814; }
+        .cp-chip.active { border-color: #2c2c2c; color: #2c2c2c; }
         .cp-toggle {
           font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
-          letter-spacing: 0.1em; text-transform: uppercase; color: #9c8e7e;
-          background: transparent; border: none; cursor: pointer; padding: 0;
+          color: #999; background: transparent; border: none; cursor: pointer; padding: 0;
         }
-        .cp-toggle:hover { color: #1a1814; }
+        .cp-toggle:hover { color: #2c2c2c; }
         .cp-panel {
           margin-top: 1.5rem; padding: 1.5rem;
-          border: 1px solid #d4cfc8; background: #faf8f4;
+          border: 1px solid #e0e0e0; background: #fafafa;
         }
         .cp-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
         .cp-item {
           font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
-          padding: 0.3rem 0.7rem; border: 1px solid #d4cfc8;
-          background: transparent; color: #6b6058; cursor: pointer;
+          padding: 0.3rem 0.7rem; border: 1px solid #e0e0e0;
+          background: transparent; color: #999; cursor: pointer;
           transition: all 0.15s ease;
         }
-        .cp-item:hover { border-color: #1a1814; }
-        .cp-item.selected { border-color: #1a1814; color: #1a1814; background: rgba(26,24,20,0.03); }
+        .cp-item:hover { border-color: #2c2c2c; }
+        .cp-item.selected { border-color: #2c2c2c; color: #2c2c2c; background: rgba(44,44,44,0.03); }
         .cp-new-form {
           display: flex; gap: 0.5rem; align-items: flex-end;
-          margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e8e4de;
+          margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #f0f0f0;
         }
         .cp-new-form input {
           font-family: 'DM Mono', monospace; font-size: 0.7rem;
-          color: #1a1814; background: transparent; border: none;
-          border-bottom: 1px solid #d4cfc8; padding: 0.3rem 0;
+          color: #2c2c2c; background: transparent; border: none;
+          border-bottom: 1px solid #e0e0e0; padding: 0.3rem 0;
           outline: none; width: 180px;
         }
-        .cp-new-form input:focus { border-bottom-color: #e8694a; }
-        .cp-new-form input::placeholder { color: #c8c2ba; }
+        .cp-new-form input:focus { border-bottom-color: #2c2c2c; }
+        .cp-new-form input::placeholder { color: #ccc; }
         .cp-new-form button {
           font-family: 'DM Mono', monospace; font-size: 0.6rem;
-          letter-spacing: 0.1em; text-transform: uppercase;
-          color: #f7f4ef; background: #1a1814; border: none;
+          letter-spacing: 0.06em; text-transform: uppercase;
+          color: #fff; background: #2c2c2c; border: none;
           padding: 0.4rem 0.8rem; cursor: pointer;
         }
-        .cp-new-form button:hover { background: #e8694a; }
+        .cp-new-form button:hover { background: #c45a3c; }
 
         /* ── READ STATUS ── */
         .rs-wrap { margin-top: 2.5rem; }
         .rs-label {
           font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 400;
-          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e;
+          letter-spacing: 0.08em; text-transform: uppercase; color: #999;
           margin-bottom: 0.75rem;
         }
         .rs-options { display: flex; gap: 0.5rem; flex-wrap: wrap; }
         .rs-btn {
           font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
-          letter-spacing: 0.08em; padding: 0.35rem 0.8rem;
-          border: 1px solid #d4cfc8; background: transparent;
-          color: #6b6058; cursor: pointer; transition: all 0.15s ease;
+          padding: 0.3rem 0.7rem;
+          border: 1px solid #e0e0e0; background: transparent;
+          color: #999; cursor: pointer; transition: all 0.15s ease;
         }
-        .rs-btn:hover { border-color: #1a1814; }
-        .rs-btn.active { border-color: #e8694a; color: #e8694a; background: rgba(232,105,74,0.05); }
+        .rs-btn:hover { border-color: #2c2c2c; }
+        .rs-btn.active { border-color: #2c2c2c; color: #2c2c2c; }
 
         /* ── VALUE PANEL ── */
         .value-panel { margin-top: 2.5rem; }
         .vp-label {
           font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 400;
-          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e;
+          letter-spacing: 0.08em; text-transform: uppercase; color: #999;
           margin-bottom: 0.75rem;
         }
         .vp-current { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 0.75rem; }
         .vp-amount {
-          font-family: 'DM Mono', monospace; font-size: 1.2rem; font-weight: 400; color: #e8694a;
+          font-family: 'DM Mono', monospace; font-size: 1.1rem; font-weight: 400; color: #2c2c2c;
         }
         .vp-no-value {
-          font-family: 'DM Mono', monospace; font-size: 0.75rem; font-weight: 300; color: #c8c2ba;
+          font-family: 'DM Mono', monospace; font-size: 0.75rem; font-weight: 300; color: #ccc;
         }
         .vp-checked {
-          font-family: 'DM Mono', monospace; font-size: 0.55rem; font-weight: 300; color: #9c8e7e;
+          font-family: 'DM Mono', monospace; font-size: 0.55rem; font-weight: 300; color: #999;
         }
         .vp-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
         .vp-btn {
           font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
-          letter-spacing: 0.08em; text-transform: uppercase; color: #9c8e7e;
-          background: transparent; border: 1px solid #d4cfc8; padding: 0.3rem 0.7rem;
+          letter-spacing: 0.06em; text-transform: uppercase; color: #999;
+          background: transparent; border: 1px solid #e0e0e0; padding: 0.3rem 0.7rem;
           cursor: pointer; transition: all 0.15s ease;
         }
-        .vp-btn:hover { border-color: #1a1814; color: #1a1814; }
-        .vp-btn:disabled { opacity: 0.4; cursor: default; }
+        .vp-btn:hover { border-color: #2c2c2c; color: #2c2c2c; }
+        .vp-btn:disabled { opacity: 0.3; cursor: default; }
         .vp-message {
-          font-family: 'DM Mono', monospace; font-size: 0.65rem; color: #4a443c; margin-top: 0.75rem;
+          font-family: 'DM Mono', monospace; font-size: 0.65rem; color: #666; margin-top: 0.75rem;
         }
         .vp-manual {
           display: flex; gap: 0.5rem; align-items: flex-end; margin-top: 0.75rem;
         }
         .vp-manual input {
-          font-family: 'DM Mono', monospace; font-size: 0.75rem; color: #1a1814;
-          background: transparent; border: none; border-bottom: 1px solid #d4cfc8;
+          font-family: 'DM Mono', monospace; font-size: 0.75rem; color: #2c2c2c;
+          background: transparent; border: none; border-bottom: 1px solid #e0e0e0;
           padding: 0.3rem 0; outline: none; width: 100px;
         }
-        .vp-manual input:focus { border-bottom-color: #e8694a; }
+        .vp-manual input:focus { border-bottom-color: #2c2c2c; }
         .vp-manual button {
-          font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em;
-          text-transform: uppercase; color: #f7f4ef; background: #1a1814;
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em;
+          text-transform: uppercase; color: #fff; background: #2c2c2c;
           border: none; padding: 0.4rem 0.8rem; cursor: pointer;
         }
-        .vp-manual button:hover { background: #e8694a; }
+        .vp-manual button:hover { background: #c45a3c; }
         .vp-history { margin-top: 1.25rem; }
         .vp-hist-label {
           font-family: 'DM Mono', monospace; font-size: 0.55rem; font-weight: 400;
-          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e; margin-bottom: 0.5rem;
+          letter-spacing: 0.08em; text-transform: uppercase; color: #999; margin-bottom: 0.5rem;
         }
         .vp-hist-table { width: 100%; max-width: 400px; border-collapse: collapse; }
         .vp-hist-table th {
           font-family: 'DM Mono', monospace; font-size: 0.55rem; font-weight: 400;
-          letter-spacing: 0.1em; text-transform: uppercase; color: #9c8e7e;
-          text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid #d4cfc8;
+          letter-spacing: 0.06em; text-transform: uppercase; color: #999;
+          text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid #e0e0e0;
         }
         .vp-hist-table td {
           font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 300;
-          color: #4a443c; padding: 0.4rem 0.5rem; border-bottom: 1px solid #e8e4de;
+          color: #666; padding: 0.4rem 0.5rem; border-bottom: 1px solid #f0f0f0;
         }
-        .vp-hist-val { color: #e8694a; }
+        .vp-hist-val { color: #2c2c2c; }
         .vp-empty {
-          font-family: 'Cormorant Garamond', serif; font-size: 0.9rem; font-style: italic; color: #9c8e7e;
+          font-family: 'Cormorant Garamond', serif; font-size: 0.9rem; font-style: italic; color: #999;
         }
       `}</style>
 
@@ -363,7 +357,7 @@ export default async function BookPage({ params }) {
           <label>Est. Value</label>
           {book.estimated_value_usd
             ? <span className="value">${Number(book.estimated_value_usd).toFixed(2)}</span>
-            : <span className="mono" style={{ color: '#c8c2ba' }}>—</span>
+            : <span className="mono" style={{ color: '#ccc' }}>—</span>
           }
         </div>
       </div>
