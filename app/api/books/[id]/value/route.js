@@ -11,7 +11,7 @@ export async function GET(request, { params }) {
 
 async function lookupPrice(isbn, title) {
   // 1. Try eBay (primary — real market prices)
-  const ebayResult = await searchEbaySoldPrice(isbn)
+  const ebayResult = await searchEbaySoldPrice(isbn, title)
   if (ebayResult) return ebayResult
 
   // 2. Try Google Books

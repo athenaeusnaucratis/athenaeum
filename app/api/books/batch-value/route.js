@@ -4,7 +4,7 @@ import { searchEbaySoldPrice } from '@/lib/ebay'
 
 async function lookupPrice(isbn, title) {
   // Try eBay first
-  const ebayResult = await searchEbaySoldPrice(isbn)
+  const ebayResult = await searchEbaySoldPrice(isbn, book.title)
   if (ebayResult) return ebayResult
 
   // Try Google Books by ISBN
