@@ -12,6 +12,8 @@ export default async function CollectionPage() {
       publication_year,
       estimated_value_usd,
       language,
+      condition,
+      format,
       authors:book_authors(
         authors(full_name)
       )
@@ -102,6 +104,65 @@ export default async function CollectionPage() {
         .no-results td {
           font-family: 'Cormorant Garamond', serif; font-style: italic;
           color: #9c8e7e; padding: 2rem 0;
+        }
+
+        /* ── SORT ── */
+        .sortable {
+          cursor: pointer;
+          user-select: none;
+          transition: color 0.15s ease;
+        }
+        .sortable:hover { color: #1a1814; }
+
+        /* ── FILTERS ── */
+        .filter-toggle {
+          font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 300;
+          letter-spacing: 0.1em; text-transform: uppercase; color: #9c8e7e;
+          background: transparent; border: 1px solid #d4cfc8;
+          padding: 0.3rem 0.7rem; cursor: pointer; transition: all 0.15s ease;
+        }
+        .filter-toggle:hover { border-color: #1a1814; color: #1a1814; }
+        .filter-toggle.active { border-color: #e8694a; color: #e8694a; }
+
+        .filter-bar {
+          display: flex; gap: 1.5rem; align-items: flex-end;
+          padding: 1rem 0 0; flex-wrap: wrap;
+        }
+        .filter-item { display: flex; flex-direction: column; gap: 0.3rem; }
+        .filter-item label {
+          font-family: 'DM Mono', monospace; font-size: 0.55rem; font-weight: 400;
+          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e;
+        }
+        .filter-item select {
+          font-family: 'DM Mono', monospace; font-size: 0.7rem; font-weight: 300;
+          color: #1a1814; background: transparent; border: none;
+          border-bottom: 1px solid #d4cfc8; padding: 0.3rem 0; outline: none;
+          min-width: 120px;
+        }
+        .filter-item select:focus { border-bottom-color: #e8694a; }
+        .clear-filters {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
+          letter-spacing: 0.1em; text-transform: uppercase; color: #9c8e7e;
+          background: transparent; border: none; cursor: pointer; padding: 0.3rem 0;
+        }
+        .clear-filters:hover { color: #c0392b; }
+
+        /* ── PAGINATION ── */
+        .pagination {
+          display: flex; align-items: center; justify-content: center;
+          gap: 1.5rem; margin-top: 2rem; padding-top: 1.5rem;
+          border-top: 1px solid #e8e4de;
+        }
+        .page-btn {
+          font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 300;
+          letter-spacing: 0.1em; text-transform: uppercase; color: #9c8e7e;
+          background: transparent; border: none; cursor: pointer; padding: 0;
+        }
+        .page-btn:hover:not(:disabled) { color: #1a1814; }
+        .page-btn:disabled { opacity: 0.3; cursor: default; }
+        .page-info {
+          font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 300;
+          color: #6b6058;
         }
 
         .col-title  { width: 45%; }
