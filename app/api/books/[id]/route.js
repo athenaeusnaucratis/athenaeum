@@ -1,4 +1,12 @@
 import { supabaseAdmin } from '@/lib/supabase'
+import { deleteBook } from '@/lib/books'
+
+export async function DELETE(request, { params }) {
+  const { id } = await params
+  const { error } = await deleteBook(id)
+  if (error) return Response.json({ error: error.message }, { status: 500 })
+  return Response.json({ ok: true })
+}
 
 export async function PATCH(request, { params }) {
   const { id } = await params

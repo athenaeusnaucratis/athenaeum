@@ -2,6 +2,8 @@ import { supabase } from '@/lib/supabase'
 import BookList from '@/app/components/BookList'
 import PageShell from '@/app/components/PageShell'
 
+export const dynamic = 'force-dynamic'
+
 export default async function CollectionPage() {
   const { data: books, error } = await supabase
     .from('books')

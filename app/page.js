@@ -2,6 +2,8 @@ import { getCollectionStats } from '@/lib/books'
 import PageShell from '@/app/components/PageShell'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function Home() {
   const stats = await getCollectionStats()
 
@@ -109,8 +111,8 @@ export default async function Home() {
 
       <div className="quick-links">
         <Link href="/collection" className="quick-link primary">Collection</Link>
-        <Link href="/genre" className="quick-link">Genre</Link>
-        <Link href="/collections" className="quick-link">Shelves</Link>
+        <Link href="/authors" className="quick-link">Authors</Link>
+        <Link href="/genre" className="quick-link">Category</Link>
         <Link href="/add" className="quick-link">+ Add</Link>
       </div>
     </PageShell>

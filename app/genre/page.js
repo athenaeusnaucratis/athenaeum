@@ -11,6 +11,8 @@ const TYPE_LABELS = {
 
 const TYPE_ORDER = ['cuisine', 'restaurant', 'reference', 'other']
 
+export const dynamic = 'force-dynamic'
+
 export default async function GenrePage() {
   const { data: tags, error } = await getAllTags()
 
@@ -77,7 +79,7 @@ export default async function GenrePage() {
       `}</style>
 
       <div className="genre-header">
-        <h1 className="page-title">Genre</h1>
+        <h1 className="page-title">Category</h1>
         <p className="page-subtitle">Browse by category</p>
       </div>
 

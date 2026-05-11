@@ -4,8 +4,8 @@ export default function Nav({ active }) {
   const links = [
     { href: '/', label: 'Home' },
     { href: '/collection', label: 'Collection' },
-    { href: '/collections', label: 'Shelves' },
-    { href: '/genre', label: 'Genre' },
+    { href: '/authors', label: 'Authors' },
+    { href: '/genre', label: 'Category' },
     { href: '/add', label: '+ Add' },
   ]
 

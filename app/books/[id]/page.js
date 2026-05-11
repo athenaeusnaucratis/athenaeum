@@ -5,6 +5,7 @@ import CollectionPicker from '@/app/components/CollectionPicker'
 import ReadStatusPicker from '@/app/components/ReadStatusPicker'
 import BookEditor from '@/app/components/BookEditor'
 import ValuePanel from '@/app/components/ValuePanel'
+import DeleteBook from '@/app/components/DeleteBook'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -278,6 +279,32 @@ export default async function BookPage({ params }) {
         .vp-empty {
           font-family: 'Cormorant Garamond', serif; font-size: 0.9rem; font-style: italic; color: #999;
         }
+
+        /* ── DELETE ── */
+        .delete-wrap {
+          margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e0e0e0;
+          display: flex; align-items: center; gap: 1rem;
+        }
+        .delete-btn {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
+          color: #ccc; background: transparent; border: none; cursor: pointer; padding: 0;
+          transition: color 0.15s ease;
+        }
+        .delete-btn:hover { color: #c45a3c; }
+        .delete-confirm-text {
+          font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 300; color: #666;
+        }
+        .delete-yes {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 400;
+          color: #fff; background: #c45a3c; border: none;
+          padding: 0.35rem 0.7rem; cursor: pointer;
+        }
+        .delete-yes:disabled { opacity: 0.5; cursor: default; }
+        .delete-no {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
+          color: #999; background: transparent; border: none; cursor: pointer; padding: 0;
+        }
+        .delete-no:hover { color: #2c2c2c; }
       `}</style>
 
       <div className="book-header">
@@ -303,12 +330,6 @@ export default async function BookPage({ params }) {
           <label>Year</label>
           <span className="mono">{book.publication_year ?? '—'}</span>
         </div>
-        {book.edition && (
-          <div className="detail-item">
-            <label>Edition</label>
-            <span className="mono">{book.edition}</span>
-          </div>
-        )}
         {book.printing_number && (
           <div className="detail-item">
             <label>Printing</label>
@@ -335,12 +356,6 @@ export default async function BookPage({ params }) {
           <label>Condition</label>
           <span>{book.condition ?? '—'}</span>
         </div>
-        {book.dimensions && (
-          <div className="detail-item">
-            <label>Dimensions</label>
-            <span className="mono">{book.dimensions}</span>
-          </div>
-        )}
         {book.isbn_13 && (
           <div className="detail-item">
             <label>ISBN-13</label>
@@ -378,6 +393,8 @@ export default async function BookPage({ params }) {
           <p>{book.notes}</p>
         </div>
       )}
+
+      <DeleteBook bookId={id} />
     </PageShell>
   )
 }
