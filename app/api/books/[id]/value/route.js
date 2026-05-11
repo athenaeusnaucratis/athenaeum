@@ -1,5 +1,6 @@
 import { addValueRecord, getValueHistory } from '@/lib/books'
 import { supabase } from '@/lib/supabase'
+import { searchEbaySoldPrice } from '@/lib/ebay'
 
 export async function GET(request, { params }) {
   const { id } = await params
@@ -9,7 +10,11 @@ export async function GET(request, { params }) {
 }
 
 async function lookupPrice(isbn, title) {
-  // 1. Try Google Books
+  // 1. Try eBay (primary — real market prices)
+  const ebayResult = await searchEbaySoldPrice(isbn, title)
+  if (ebayResult) return ebayResult
+
+  // 2. Try Google Books
   if (isbn) {
     try {
       const res = await fetch(
@@ -27,37 +32,7 @@ async function lookupPrice(isbn, title) {
     } catch {}
   }
 
-  // 2. Try Open Library for page count / edition data to estimate
-  if (isbn) {
-    try {
-      const res = await fetch(
-        `https://openlibrary.org/isbn/${isbn}.json`,
-        { cache: 'no-store' }
-      )
-      if (res.ok) {
-        const ol = await res.json()
-        // Check if there's a linked work with more editions
-        if (ol.works?.[0]?.key) {
-          const workRes = await fetch(
-            `https://openlibrary.org${ol.works[0].key}/editions.json?limit=5`,
-            { cache: 'no-store' }
-          )
-          if (workRes.ok) {
-            const editions = await workRes.json()
-            // Look through editions for any with price data in physical_format or notes
-            for (const ed of editions.entries ?? []) {
-              if (ed.list_price) {
-                const price = parseFloat(ed.list_price.replace(/[^0-9.]/g, ''))
-                if (price > 0) return { value: price, source: 'open_library' }
-              }
-            }
-          }
-        }
-      }
-    } catch {}
-  }
-
-  // 3. Try Google Books by title as last resort
+  // 3. Try Google Books by title
   if (title) {
     try {
       const res = await fetch(
@@ -99,7 +74,13 @@ export async function POST(request, { params }) {
     if (result) {
       const { error } = await addValueRecord(id, result.value, result.source)
       if (error) return Response.json({ error: error.message }, { status: 500 })
-      return Response.json({ value: result.value, source: result.source })
+      return Response.json({
+        value: result.value,
+        source: result.source,
+        listings: result.listings,
+        low: result.low,
+        high: result.high,
+      })
     }
 
     return Response.json({ error: 'No price data found', value: null, source: null }, { status: 200 })

@@ -30,7 +30,11 @@ export default function ValuePanel({ bookId, currentValue, lastChecked }) {
     const data = await res.json()
     setLooking(false)
     if (data.value) {
-      setMessage(`Found: $${Number(data.value).toFixed(2)} (${data.source})`)
+      let msg = `$${Number(data.value).toFixed(2)} (${data.source})`
+      if (data.listings) {
+        msg += ` — ${data.listings} listings, $${Number(data.low).toFixed(2)}–$${Number(data.high).toFixed(2)}`
+      }
+      setMessage(msg)
       router.refresh()
       if (showHistory) loadHistory()
     } else {

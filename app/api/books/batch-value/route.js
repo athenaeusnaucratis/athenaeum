@@ -1,7 +1,12 @@
 import { supabase } from '@/lib/supabase'
 import { addValueRecord } from '@/lib/books'
+import { searchEbaySoldPrice } from '@/lib/ebay'
 
 async function lookupPrice(isbn, title) {
+  // Try eBay first
+  const ebayResult = await searchEbaySoldPrice(isbn, title)
+  if (ebayResult) return ebayResult
+
   // Try Google Books by ISBN
   if (isbn) {
     try {
@@ -70,8 +75,8 @@ export async function POST(request) {
       results.push({ id: book.id, title: book.title, value: null, source: null, status: 'not_found' })
     }
 
-    // Rate limit - 200ms between requests
-    await new Promise(r => setTimeout(r, 200))
+    // Rate limit - 300ms between requests for eBay
+    await new Promise(r => setTimeout(r, 300))
   }
 
   return Response.json({ results })
