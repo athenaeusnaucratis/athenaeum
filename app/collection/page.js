@@ -14,6 +14,9 @@ export default async function CollectionPage() {
       language,
       condition,
       format,
+      isbn_13,
+      isbn_10,
+      cover_image_url,
       authors:book_authors(
         authors(full_name)
       )
@@ -169,6 +172,67 @@ export default async function CollectionPage() {
         .col-author { width: 30%; }
         .col-year   { width: 10%; }
         .col-value  { width: 15%; }
+
+        /* ── VIEW TOGGLE ── */
+        .view-toggle { display: flex; gap: 0.25rem; margin-left: auto; }
+        .vt-btn {
+          font-size: 1rem; line-height: 1; padding: 0.25rem 0.45rem;
+          background: transparent; border: 1px solid #d4cfc8; color: #9c8e7e;
+          cursor: pointer; transition: all 0.15s ease;
+        }
+        .vt-btn:hover { border-color: #1a1814; color: #1a1814; }
+        .vt-btn.active { border-color: #e8694a; color: #e8694a; }
+
+        /* ── GRID VIEW ── */
+        .grid-wrap {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+          gap: 1.5rem;
+          margin-top: 1.5rem;
+        }
+        .grid-card {
+          text-decoration: none; color: inherit;
+          display: flex; flex-direction: column; gap: 0.5rem;
+          transition: transform 0.15s ease;
+        }
+        .grid-card:hover { transform: translateY(-2px); }
+        .grid-cover {
+          aspect-ratio: 2/3; border-radius: 4px; overflow: hidden;
+          background: #e8e4de;
+        }
+        .grid-cover img {
+          width: 100%; height: 100%; object-fit: cover;
+        }
+        .grid-placeholder {
+          width: 100%; height: 100%;
+          display: flex; align-items: center; justify-content: center;
+          background: linear-gradient(135deg, #e8e4de 0%, #d4cfc8 100%);
+        }
+        .grid-placeholder span {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 2.5rem; font-weight: 600; color: #9c8e7e;
+        }
+        .grid-info { display: flex; flex-direction: column; gap: 0.15rem; }
+        .grid-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 0.9rem; font-weight: 600; color: #1a1814;
+          line-height: 1.25;
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .grid-author {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 0.8rem; color: #9c8e7e;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .grid-value {
+          font-family: 'DM Mono', monospace;
+          font-size: 0.65rem; color: #e8694a;
+        }
+        .no-results-grid {
+          grid-column: 1 / -1;
+          font-family: 'Cormorant Garamond', serif; font-style: italic;
+          color: #9c8e7e; padding: 2rem 0;
+        }
       `}</style>
 
       <div className="collection-header">

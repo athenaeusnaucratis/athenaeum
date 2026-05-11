@@ -14,6 +14,7 @@ export default function BookList({ books }) {
   const [filterFormat, setFilterFormat] = useState('')
   const [page, setPage] = useState(1)
   const [showFilters, setShowFilters] = useState(false)
+  const [viewMode, setViewMode] = useState('table')
 
   // Extract unique values for filter dropdowns
   const languages = useMemo(() =>
@@ -33,7 +34,12 @@ export default function BookList({ books }) {
         return (
           book.title.toLowerCase().includes(q) ||
           (book.subtitle ?? '').toLowerCase().includes(q) ||
-          author.toLowerCase().includes(q)
+          author.toLowerCase().includes(q) ||
+          (book.isbn_13 ?? '').toLowerCase().includes(q) ||
+          (book.isbn_10 ?? '').toLowerCase().includes(q) ||
+          (book.language ?? '').toLowerCase().includes(q) ||
+          (book.condition ?? '').toLowerCase().includes(q) ||
+          (book.format ?? '').toLowerCase().includes(q)
         )
       })
     }
@@ -103,7 +109,7 @@ export default function BookList({ books }) {
       <div className="search-wrap">
         <input
           type="search"
-          placeholder="Search by title or author…"
+          placeholder="Search title, author, ISBN, language…"
           value={query}
           onChange={e => { setQuery(e.target.value); setPage(1) }}
           className="search-input"
@@ -114,6 +120,18 @@ export default function BookList({ books }) {
         >
           Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
         </button>
+        <div className="view-toggle">
+          <button
+            className={`vt-btn${viewMode === 'table' ? ' active' : ''}`}
+            onClick={() => setViewMode('table')}
+            title="Table view"
+          >☰</button>
+          <button
+            className={`vt-btn${viewMode === 'grid' ? ' active' : ''}`}
+            onClick={() => setViewMode('grid')}
+            title="Grid view"
+          >▦</button>
+        </div>
         {(query || activeFilterCount > 0) && (
           <span className="search-count">
             {sorted.length} of {books.length}
@@ -152,61 +170,88 @@ export default function BookList({ books }) {
         </div>
       )}
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th className="col-title sortable" onClick={() => handleSort('title')}>
-                Title{sortIndicator('title')}
-              </th>
-              <th className="col-author sortable" onClick={() => handleSort('author')}>
-                Author{sortIndicator('author')}
-              </th>
-              <th className="col-year sortable" onClick={() => handleSort('year')}>
-                Year{sortIndicator('year')}
-              </th>
-              <th className="col-value sortable" onClick={() => handleSort('value')}>
-                Value{sortIndicator('value')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginated.map(book => (
-              <tr key={book.id}>
-                <td className="col-title">
-                  <Link href={`/books/${book.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <span className="book-title">{book.title}</span>
-                    {book.subtitle && (
-                      <span className="book-subtitle">{book.subtitle}</span>
-                    )}
-                  </Link>
-                </td>
-                <td className="col-author">
-                  <span className="book-author">
-                    {book.authors?.[0]?.authors?.full_name ?? '—'}
-                  </span>
-                </td>
-                <td className="col-year">
-                  <span className="book-year">
-                    {book.publication_year ?? '—'}
-                  </span>
-                </td>
-                <td className="col-value">
-                  {book.estimated_value_usd
-                    ? <span className="book-value">${Number(book.estimated_value_usd).toFixed(2)}</span>
-                    : <span className="book-value empty">—</span>
-                  }
-                </td>
-              </tr>
-            ))}
-            {paginated.length === 0 && (
+      {viewMode === 'table' ? (
+        <div className="table-wrap">
+          <table>
+            <thead>
               <tr>
-                <td colSpan={4} className="no-results">No books found</td>
+                <th className="col-title sortable" onClick={() => handleSort('title')}>
+                  Title{sortIndicator('title')}
+                </th>
+                <th className="col-author sortable" onClick={() => handleSort('author')}>
+                  Author{sortIndicator('author')}
+                </th>
+                <th className="col-year sortable" onClick={() => handleSort('year')}>
+                  Year{sortIndicator('year')}
+                </th>
+                <th className="col-value sortable" onClick={() => handleSort('value')}>
+                  Value{sortIndicator('value')}
+                </th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {paginated.map(book => (
+                <tr key={book.id}>
+                  <td className="col-title">
+                    <Link href={`/books/${book.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <span className="book-title">{book.title}</span>
+                      {book.subtitle && (
+                        <span className="book-subtitle">{book.subtitle}</span>
+                      )}
+                    </Link>
+                  </td>
+                  <td className="col-author">
+                    <span className="book-author">
+                      {book.authors?.[0]?.authors?.full_name ?? '—'}
+                    </span>
+                  </td>
+                  <td className="col-year">
+                    <span className="book-year">
+                      {book.publication_year ?? '—'}
+                    </span>
+                  </td>
+                  <td className="col-value">
+                    {book.estimated_value_usd
+                      ? <span className="book-value">${Number(book.estimated_value_usd).toFixed(2)}</span>
+                      : <span className="book-value empty">—</span>
+                    }
+                  </td>
+                </tr>
+              ))}
+              {paginated.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="no-results">No books found</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="grid-wrap">
+          {paginated.map(book => (
+            <Link key={book.id} href={`/books/${book.id}`} className="grid-card">
+              <div className="grid-cover">
+                {book.cover_image_url
+                  ? <img src={book.cover_image_url} alt="" />
+                  : <div className="grid-placeholder">
+                      <span>{book.title.charAt(0)}</span>
+                    </div>
+                }
+              </div>
+              <div className="grid-info">
+                <span className="grid-title">{book.title}</span>
+                <span className="grid-author">{book.authors?.[0]?.authors?.full_name ?? ''}</span>
+                {book.estimated_value_usd && (
+                  <span className="grid-value">${Number(book.estimated_value_usd).toFixed(2)}</span>
+                )}
+              </div>
+            </Link>
+          ))}
+          {paginated.length === 0 && (
+            <p className="no-results-grid">No books found</p>
+          )}
+        </div>
+      )}
 
       {totalPages > 1 && (
         <div className="pagination">
