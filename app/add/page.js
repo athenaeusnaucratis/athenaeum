@@ -72,7 +72,11 @@ export default function AddBookPage() {
         }
         .field input:focus { border-bottom-color: #e8694a; }
         .field input::placeholder { color: #c8c2ba; }
-        .cover-preview { width: 100px; border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+        .cover-preview { width: 120px; border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+        .cover-section { margin-bottom: 0.5rem; }
+        .cover-with-ocr { display: flex; gap: 1.5rem; align-items: flex-start; }
+        .cover-actions { display: flex; flex-direction: column; gap: 0.75rem; }
+        .cover-upload-btn { display: inline-block; }
         .form-actions { display: flex; gap: 1rem; }
 
         /* ── BUTTONS ── */

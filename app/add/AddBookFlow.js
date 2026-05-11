@@ -12,13 +12,17 @@ const EMPTY_FORM = {
 
 export default function AddBookFlow() {
   const router = useRouter()
-  const [stage, setStage] = useState('idle') // idle | scanning | looking_up | confirm | saving | done
+  const [stage, setStage] = useState('idle') // idle | scanning | looking_up | ocr_processing | confirm | saving | done
   const [form, setForm] = useState(EMPTY_FORM)
   const [captureMethod, setCaptureMethod] = useState('manual')
   const [error, setError] = useState(null)
   const [newBookId, setNewBookId] = useState(null)
+  const [coverFile, setCoverFile] = useState(null)
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState(null)
+  const [uploadingCover, setUploadingCover] = useState(false)
   const videoRef = useRef(null)
   const scannerRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   // Start barcode scanner
   useEffect(() => {
@@ -87,6 +91,39 @@ export default function AddBookFlow() {
   function handleManual() {
     setForm(EMPTY_FORM)
     setCaptureMethod('manual')
+    setCoverFile(null)
+    setCoverPreviewUrl(null)
+    setStage('confirm')
+  }
+
+  function handleCoverSelect(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCoverFile(file)
+    setCoverPreviewUrl(URL.createObjectURL(file))
+  }
+
+  async function handleOCR() {
+    if (!coverFile) return
+    setStage('ocr_processing')
+    setError(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', coverFile)
+      const res = await fetch('/api/ocr', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'OCR failed')
+      setForm(prev => ({
+        ...prev,
+        title: data.title || prev.title,
+        subtitle: data.subtitle || prev.subtitle,
+        author: data.author || prev.author,
+        publisher: data.publisher || prev.publisher,
+      }))
+      setCaptureMethod('cover_ocr')
+    } catch (e) {
+      setError(e.message + ' — fill in fields manually.')
+    }
     setStage('confirm')
   }
 
@@ -104,7 +141,18 @@ export default function AddBookFlow() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Failed to save.')
-      setNewBookId(json.id)
+      const bookId = json.id
+      setNewBookId(bookId)
+
+      // Upload cover photo if we have one
+      if (coverFile) {
+        setUploadingCover(true)
+        const fd = new FormData()
+        fd.append('file', coverFile)
+        await fetch(`/api/books/${bookId}/cover`, { method: 'POST', body: fd })
+        setUploadingCover(false)
+      }
+
       setStage('done')
     } catch (e) {
       setError(e.message)
@@ -136,10 +184,25 @@ export default function AddBookFlow() {
         <button className="btn-primary" onClick={() => { setError(null); setStage('scanning') }}>
           Scan Barcode
         </button>
+        <button className="btn-secondary" onClick={() => fileInputRef.current?.click()}>
+          Photo of Cover
+        </button>
         <button className="btn-secondary" onClick={handleManual}>
           Enter Manually
         </button>
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          handleCoverSelect(e)
+          setCaptureMethod('cover_ocr')
+          setStage('confirm')
+        }}
+      />
       {error && <p className="flow-error">{error}</p>}
     </div>
   )
@@ -163,10 +226,50 @@ export default function AddBookFlow() {
     </div>
   )
 
+  if (stage === 'ocr_processing') return (
+    <div className="flow-center">
+      <p className="flow-hint">Reading cover with AI…</p>
+      {coverPreviewUrl && <img src={coverPreviewUrl} alt="Cover" className="cover-preview" />}
+    </div>
+  )
+
   if (stage === 'confirm') return (
     <form className="book-form" onSubmit={handleSubmit}>
       <p className="flow-hint">Review and confirm the details</p>
       {error && <p className="flow-error">{error}</p>}
+
+      {/* Cover photo section */}
+      <div className="cover-section">
+        {coverPreviewUrl ? (
+          <div className="cover-with-ocr">
+            <img src={coverPreviewUrl} alt="Cover" className="cover-preview" />
+            <div className="cover-actions">
+              <button type="button" className="btn-ghost" onClick={handleOCR}>
+                Extract text from cover
+              </button>
+              <button type="button" className="btn-ghost" onClick={() => {
+                setCoverFile(null); setCoverPreviewUrl(null)
+              }}>
+                Remove photo
+              </button>
+            </div>
+          </div>
+        ) : form.cover_image_url ? (
+          <img src={form.cover_image_url} alt="Cover" className="cover-preview" />
+        ) : (
+          <button type="button" className="btn-secondary cover-upload-btn" onClick={() => fileInputRef.current?.click()}>
+            + Add Cover Photo
+          </button>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style={{ display: 'none' }}
+          onChange={handleCoverSelect}
+        />
+      </div>
 
       <div className="form-grid">
         {field('title', 'Title *', { required: true })}
@@ -181,20 +284,18 @@ export default function AddBookFlow() {
         {field('cover_image_url', 'Cover Image URL')}
       </div>
 
-      {form.cover_image_url && (
-        <img src={form.cover_image_url} alt="Cover preview" className="cover-preview" />
-      )}
-
       <div className="form-actions">
-        <button type="submit" className="btn-primary">Save Book</button>
-        <button type="button" className="btn-ghost" onClick={() => setStage('idle')}>Back</button>
+        <button type="submit" className="btn-primary">
+          {uploadingCover ? 'Uploading cover…' : 'Save Book'}
+        </button>
+        <button type="button" className="btn-ghost" onClick={() => { setStage('idle'); setCoverFile(null); setCoverPreviewUrl(null) }}>Back</button>
       </div>
     </form>
   )
 
   if (stage === 'saving') return (
     <div className="flow-center">
-      <p className="flow-hint">Saving…</p>
+      <p className="flow-hint">{uploadingCover ? 'Uploading cover…' : 'Saving…'}</p>
     </div>
   )
 
@@ -203,7 +304,9 @@ export default function AddBookFlow() {
       <p className="flow-success">Book saved.</p>
       <div className="flow-buttons">
         <Link href={`/books/${newBookId}`} className="btn-primary">View Book</Link>
-        <button className="btn-secondary" onClick={() => { setForm(EMPTY_FORM); setStage('idle') }}>
+        <button className="btn-secondary" onClick={() => {
+          setForm(EMPTY_FORM); setCoverFile(null); setCoverPreviewUrl(null); setStage('idle')
+        }}>
           Add Another
         </button>
       </div>

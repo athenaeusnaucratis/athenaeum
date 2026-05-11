@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const FIELDS = [
@@ -47,6 +47,23 @@ export default function BookEditor({ book, authors, publisher }) {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const coverInputRef = useRef(null)
+
+  async function handleCoverUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingCover(true)
+    setError(null)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch(`/api/books/${book.id}/cover`, { method: 'POST', body: fd })
+    const json = await res.json()
+    setUploadingCover(false)
+    if (!res.ok) { setError(json.error ?? 'Upload failed'); return }
+    setForm(p => ({ ...p, cover_image_url: json.cover_image_url }))
+    router.refresh()
+  }
 
   async function handleSave() {
     if (!form.title.trim()) { setError('Title is required.'); return }
@@ -118,6 +135,16 @@ export default function BookEditor({ book, authors, publisher }) {
             value={form.publisher}
             onChange={e => setForm(p => ({ ...p, publisher: e.target.value }))}
           />
+        </div>
+      </div>
+      <div className="editor-field full">
+        <label>Cover Photo</label>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button type="button" className="save-btn" onClick={() => coverInputRef.current?.click()} disabled={uploadingCover}>
+            {uploadingCover ? 'Uploading…' : 'Upload Cover'}
+          </button>
+          <input ref={coverInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleCoverUpload} />
+          {form.cover_image_url && <span style={{ fontFamily: 'DM Mono', fontSize: '0.6rem', color: '#9c8e7e' }}>✓ Cover set</span>}
         </div>
       </div>
       <div className="editor-actions">
