@@ -1,6 +1,48 @@
 import { supabase } from '@/lib/supabase'
 import { addValueRecord } from '@/lib/books'
 
+async function lookupPrice(isbn, title) {
+  // Try Google Books by ISBN
+  if (isbn) {
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&maxResults=1`,
+        { cache: 'no-store' }
+      )
+      const json = await res.json()
+      const saleInfo = json.items?.[0]?.saleInfo
+      if (saleInfo?.listPrice?.amount) {
+        return { value: saleInfo.listPrice.amount, source: 'google_books' }
+      }
+      if (saleInfo?.retailPrice?.amount) {
+        return { value: saleInfo.retailPrice.amount, source: 'google_books' }
+      }
+    } catch {}
+  }
+
+  // Try Google Books by title
+  if (title) {
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(title)}&maxResults=3`,
+        { cache: 'no-store' }
+      )
+      const json = await res.json()
+      for (const item of json.items ?? []) {
+        const si = item.saleInfo
+        if (si?.listPrice?.amount) {
+          return { value: si.listPrice.amount, source: 'google_books_title' }
+        }
+        if (si?.retailPrice?.amount) {
+          return { value: si.retailPrice.amount, source: 'google_books_title' }
+        }
+      }
+    } catch {}
+  }
+
+  return null
+}
+
 export async function POST(request) {
   const { book_ids } = await request.json()
 
@@ -19,33 +61,17 @@ export async function POST(request) {
 
   for (const book of books) {
     const isbn = book.isbn_13 || book.isbn_10
-    let value = null
-    let source = null
+    const result = await lookupPrice(isbn, book.title)
 
-    if (isbn) {
-      try {
-        const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&maxResults=1`)
-        const json = await res.json()
-        const saleInfo = json.items?.[0]?.saleInfo
-        if (saleInfo?.listPrice?.amount) {
-          value = saleInfo.listPrice.amount
-          source = 'google_books'
-        } else if (saleInfo?.retailPrice?.amount) {
-          value = saleInfo.retailPrice.amount
-          source = 'google_books'
-        }
-      } catch {}
-    }
-
-    if (value) {
-      await addValueRecord(book.id, value, source)
-      results.push({ id: book.id, title: book.title, value, source, status: 'updated' })
+    if (result) {
+      await addValueRecord(book.id, result.value, result.source)
+      results.push({ id: book.id, title: book.title, value: result.value, source: result.source, status: 'updated' })
     } else {
       results.push({ id: book.id, title: book.title, value: null, source: null, status: 'not_found' })
     }
 
-    // Rate limit - 100ms between requests
-    await new Promise(r => setTimeout(r, 100))
+    // Rate limit - 200ms between requests
+    await new Promise(r => setTimeout(r, 200))
   }
 
   return Response.json({ results })
