@@ -69,6 +69,14 @@ export default function AddBookFlow() {
 
   function stopScanner() {
     try { scannerRef.current?.reset() } catch {}
+    // Force-stop all camera tracks — reset() alone doesn't always release them on mobile
+    try {
+      const stream = videoRef.current?.srcObject
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop())
+        videoRef.current.srcObject = null
+      }
+    } catch {}
   }
 
   async function lookUpIsbn(isbn) {
