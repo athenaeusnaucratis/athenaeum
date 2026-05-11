@@ -4,6 +4,7 @@ import TagPicker from '@/app/components/TagPicker'
 import CollectionPicker from '@/app/components/CollectionPicker'
 import ReadStatusPicker from '@/app/components/ReadStatusPicker'
 import BookEditor from '@/app/components/BookEditor'
+import ValuePanel from '@/app/components/ValuePanel'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -219,6 +220,70 @@ export default async function BookPage({ params }) {
         }
         .rs-btn:hover { border-color: #1a1814; }
         .rs-btn.active { border-color: #e8694a; color: #e8694a; background: rgba(232,105,74,0.05); }
+
+        /* ── VALUE PANEL ── */
+        .value-panel { margin-top: 2.5rem; }
+        .vp-label {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 400;
+          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e;
+          margin-bottom: 0.75rem;
+        }
+        .vp-current { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 0.75rem; }
+        .vp-amount {
+          font-family: 'DM Mono', monospace; font-size: 1.2rem; font-weight: 400; color: #e8694a;
+        }
+        .vp-no-value {
+          font-family: 'DM Mono', monospace; font-size: 0.75rem; font-weight: 300; color: #c8c2ba;
+        }
+        .vp-checked {
+          font-family: 'DM Mono', monospace; font-size: 0.55rem; font-weight: 300; color: #9c8e7e;
+        }
+        .vp-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+        .vp-btn {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 300;
+          letter-spacing: 0.08em; text-transform: uppercase; color: #9c8e7e;
+          background: transparent; border: 1px solid #d4cfc8; padding: 0.3rem 0.7rem;
+          cursor: pointer; transition: all 0.15s ease;
+        }
+        .vp-btn:hover { border-color: #1a1814; color: #1a1814; }
+        .vp-btn:disabled { opacity: 0.4; cursor: default; }
+        .vp-message {
+          font-family: 'DM Mono', monospace; font-size: 0.65rem; color: #4a443c; margin-top: 0.75rem;
+        }
+        .vp-manual {
+          display: flex; gap: 0.5rem; align-items: flex-end; margin-top: 0.75rem;
+        }
+        .vp-manual input {
+          font-family: 'DM Mono', monospace; font-size: 0.75rem; color: #1a1814;
+          background: transparent; border: none; border-bottom: 1px solid #d4cfc8;
+          padding: 0.3rem 0; outline: none; width: 100px;
+        }
+        .vp-manual input:focus { border-bottom-color: #e8694a; }
+        .vp-manual button {
+          font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em;
+          text-transform: uppercase; color: #f7f4ef; background: #1a1814;
+          border: none; padding: 0.4rem 0.8rem; cursor: pointer;
+        }
+        .vp-manual button:hover { background: #e8694a; }
+        .vp-history { margin-top: 1.25rem; }
+        .vp-hist-label {
+          font-family: 'DM Mono', monospace; font-size: 0.55rem; font-weight: 400;
+          letter-spacing: 0.14em; text-transform: uppercase; color: #9c8e7e; margin-bottom: 0.5rem;
+        }
+        .vp-hist-table { width: 100%; max-width: 400px; border-collapse: collapse; }
+        .vp-hist-table th {
+          font-family: 'DM Mono', monospace; font-size: 0.55rem; font-weight: 400;
+          letter-spacing: 0.1em; text-transform: uppercase; color: #9c8e7e;
+          text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid #d4cfc8;
+        }
+        .vp-hist-table td {
+          font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 300;
+          color: #4a443c; padding: 0.4rem 0.5rem; border-bottom: 1px solid #e8e4de;
+        }
+        .vp-hist-val { color: #e8694a; }
+        .vp-empty {
+          font-family: 'Cormorant Garamond', serif; font-size: 0.9rem; font-style: italic; color: #9c8e7e;
+        }
       `}</style>
 
       <div className="book-header">
@@ -304,6 +369,8 @@ export default async function BookPage({ params }) {
       </div>
 
       <ReadStatusPicker bookId={id} initialStatus={book.read_status} />
+
+      <ValuePanel bookId={id} currentValue={book.estimated_value_usd} lastChecked={book.value_last_checked} />
 
       <CollectionPicker bookId={id} initialCollections={bookCollections} />
 
