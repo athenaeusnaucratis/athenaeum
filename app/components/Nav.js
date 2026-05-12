@@ -12,7 +12,7 @@ export default function Nav({ active }) {
   return (
     <nav className="nav-bar">
       <Link href="/" className="nav-logo">
-        Athenaeum<span>.</span>
+        Athenaeum <em>Deipnon</em><span>.</span>
       </Link>
       <div className="nav-links">
         {links.map(l => (
