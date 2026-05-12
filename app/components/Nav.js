@@ -7,20 +7,25 @@ export default function Nav({ active }) {
     { href: '/authors', label: 'Authors' },
     { href: '/genre', label: 'Category' },
     { href: '/collections', label: 'Collections' },
-    { href: '/add', label: '+ Add' },
   ]
 
   return (
-    <nav className="nav">
-      {links.map(l => (
-        <Link
-          key={l.href}
-          href={l.href}
-          className={`nav-link${active === l.href ? ' active' : ''}`}
-        >
-          {l.label}
-        </Link>
-      ))}
+    <nav className="nav-bar">
+      <Link href="/" className="nav-logo">
+        Athenaeum<span>.</span>
+      </Link>
+      <div className="nav-links">
+        {links.map(l => (
+          <Link
+            key={l.href}
+            href={l.href}
+            className={`nav-link${active === l.href ? ' active' : ''}`}
+          >
+            {l.label}
+          </Link>
+        ))}
+      </div>
+      <Link href="/add" className="nav-add">+ ADD</Link>
     </nav>
   )
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'athenaeum-v2'
+const CACHE_NAME = 'athenaeum-v5'
 const PRECACHE = ['/', '/collection', '/add']
 
 self.addEventListener('install', (e) => {

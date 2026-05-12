@@ -1,14 +1,23 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Cormorant_Garamond, DM_Mono, Jost } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const cormorant = Cormorant_Garamond({
+  variable: "--font-cormorant",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  style: ["normal", "italic"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const dmMono = DM_Mono({
+  variable: "--font-dm-mono",
   subsets: ["latin"],
+  weight: ["300", "400"],
+});
+
+const jost = Jost({
+  variable: "--font-jost",
+  subsets: ["latin"],
+  weight: ["200", "300", "400"],
 });
 
 export const metadata = {
@@ -20,14 +29,14 @@ export const metadata = {
     statusBarStyle: "default",
     title: "Athenaeum Deipnon",
   },
-  themeColor: "#f7f4ef",
+  themeColor: "#111009",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${cormorant.variable} ${dmMono.variable} ${jost.variable} h-full antialiased`}
     >
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />

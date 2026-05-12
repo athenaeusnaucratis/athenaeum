@@ -20,88 +20,144 @@ export default async function TagDetailPage({ params }) {
   return (
     <PageShell active="/genre">
       <style>{`
-        .back-link {
-          font-family: 'DM Mono', monospace;
-          font-size: 0.65rem; font-weight: 300;
-          color: #999; text-decoration: none;
-          display: inline-block; margin-top: 2.5rem;
-        }
-        .back-link:hover { color: #2c2c2c; }
-
-        .tag-header {
-          margin-top: 1rem;
-          padding-bottom: 1rem;
-          border-bottom: 1px solid #e0e0e0;
+        /* ── BREADCRUMB ── */
+        .breadcrumb {
           display: flex;
-          align-items: baseline;
-          justify-content: space-between;
+          align-items: center;
+          gap: 0.6rem;
+          padding: 1.4rem 5rem;
+          border-bottom: 1px solid var(--rule);
+          animation: fadeUp 0.5s 0.05s ease both;
+        }
+        .breadcrumb a, .breadcrumb span {
+          font-family: var(--mono);
+          font-size: 0.62rem;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          text-decoration: none;
+        }
+        .breadcrumb a { color: var(--muted); transition: color 0.15s; }
+        .breadcrumb a:hover { color: var(--ink); }
+        .breadcrumb .sep { color: var(--rule); }
+        .breadcrumb span.current { color: var(--coral); }
+
+        /* ── TAG HEADER ── */
+        .tag-detail-header {
+          padding: 3.5rem 5rem 3rem;
+          border-bottom: 1px solid var(--rule);
+          animation: fadeUp 0.6s 0.1s ease both;
         }
 
-        .tag-type {
-          font-family: 'DM Mono', monospace;
-          font-size: 0.6rem; font-weight: 400;
-          letter-spacing: 0.08em; text-transform: uppercase;
-          color: #999; margin-bottom: 0.3rem;
+        .tag-eyebrow {
+          font-family: var(--mono);
+          font-size: 0.62rem;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          color: var(--coral);
+          margin-bottom: 0.8rem;
         }
 
-        .tag-count {
-          font-family: 'DM Mono', monospace;
-          font-size: 0.75rem; font-weight: 300;
-          color: #999;
+        .tag-name-title {
+          font-family: var(--serif);
+          font-size: clamp(2rem, 4vw, 3.5rem);
+          font-weight: 300;
+          font-style: italic;
+          line-height: 1.1;
+          color: var(--ink);
         }
 
-        .book-list { margin-top: 0; }
-
-        .book-item {
-          text-decoration: none; color: inherit;
-          display: flex; align-items: baseline;
-          justify-content: space-between;
-          padding: 0.75rem 0;
-          border-bottom: 1px solid #f0f0f0;
-        }
-        .book-item:hover { background: #fafafa; }
-
-        .book-item-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 1rem; font-weight: 500; color: #2c2c2c;
+        .tag-book-count {
+          font-family: var(--mono);
+          font-size: 0.65rem;
+          color: var(--muted);
+          letter-spacing: 0.1em;
+          margin-top: 0.8rem;
         }
 
-        .book-item-author {
-          font-family: 'DM Mono', monospace;
-          font-size: 0.65rem; font-weight: 300;
-          color: #999; flex-shrink: 0; margin-left: 1rem;
+        /* ── BOOK ROWS ── */
+        .tag-book-row {
+          display: grid;
+          grid-template-columns: 1fr auto auto;
+          align-items: center;
+          padding: 1.2rem 5rem;
+          border-bottom: 1px solid var(--rule);
+          text-decoration: none;
+          color: inherit;
+          transition: background 0.15s;
+          animation: fadeUp 0.5s 0.15s ease both;
+        }
+        .tag-book-row:hover { background: var(--warm-mid); }
+
+        .tb-title {
+          font-family: var(--serif);
+          font-size: 1.05rem;
+          font-weight: 400;
+          color: var(--ink);
+          transition: color 0.15s;
+        }
+        .tag-book-row:hover .tb-title { color: var(--coral); }
+
+        .tb-author {
+          font-family: var(--mono);
+          font-size: 0.65rem;
+          color: var(--muted);
+          letter-spacing: 0.04em;
+          padding: 0 2rem;
         }
 
-        .empty-tag {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 1rem; font-style: italic;
-          color: #999; margin-top: 2rem;
+        .tb-value {
+          font-family: var(--mono);
+          font-size: 0.7rem;
+          color: var(--coral);
+          letter-spacing: 0.06em;
+        }
+        .tb-value.none { color: var(--muted); }
+
+        .empty-state {
+          font-family: var(--serif);
+          font-size: 1rem;
+          font-style: italic;
+          color: var(--muted);
+          padding: 3rem 5rem;
+        }
+
+        @media (max-width: 768px) {
+          .breadcrumb { padding: 1rem 1.25rem; }
+          .tag-detail-header { padding: 2rem 1.25rem; }
+          .tag-book-row { padding: 1rem 1.25rem; grid-template-columns: 1fr auto; }
+          .tb-author { display: none; }
         }
       `}</style>
 
-      <Link href="/genre" className="back-link">← Category</Link>
-
-      <div className="tag-header">
-        <div>
-          <p className="tag-type">{tag.type}</p>
-          <h1 className="page-title">{tag.name}</h1>
-        </div>
-        <span className="tag-count">{books?.length ?? 0} books</span>
+      {/* BREADCRUMB */}
+      <div className="breadcrumb">
+        <Link href="/genre">Category</Link>
+        <span className="sep">/</span>
+        <span className="current">{tag.name}</span>
       </div>
 
+      {/* HEADER */}
+      <div className="tag-detail-header">
+        <div className="tag-eyebrow">{tag.type}</div>
+        <h1 className="tag-name-title">{tag.name}</h1>
+        <div className="tag-book-count">{books?.length ?? 0} book{(books?.length ?? 0) !== 1 ? 's' : ''}</div>
+      </div>
+
+      {/* BOOK LIST */}
       {books?.length > 0 ? (
-        <div className="book-list">
-          {books.map(book => (
-            <Link key={book.id} href={`/books/${book.id}`} className="book-item">
-              <span className="book-item-title">{book.title}</span>
-              <span className="book-item-author">
-                {book.authors?.[0]?.authors?.full_name ?? '—'}
-              </span>
-            </Link>
-          ))}
-        </div>
+        books.map(book => (
+          <Link key={book.id} href={`/books/${book.id}`} className="tag-book-row">
+            <div className="tb-title">{book.title}</div>
+            <span className="tb-author">
+              {book.authors?.[0]?.authors?.full_name ?? '—'}
+            </span>
+            <span className={`tb-value${book.estimated_value_usd ? '' : ' none'}`}>
+              {book.estimated_value_usd ? `$${Number(book.estimated_value_usd).toFixed(2)}` : '—'}
+            </span>
+          </Link>
+        ))
       ) : (
-        <p className="empty-tag">No books tagged with "{tag.name}" yet.</p>
+        <p className="empty-state">No books tagged with &ldquo;{tag.name}&rdquo; yet.</p>
       )}
     </PageShell>
   )
