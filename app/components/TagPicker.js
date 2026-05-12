@@ -60,94 +60,96 @@ export default function TagPicker({ bookId, initialTags }) {
         .tag-picker-wrap { margin-top: 2.5rem; }
 
         .tag-section-label {
-          font-family: 'DM Mono', monospace;
+          font-family: var(--mono);
           font-size: 0.6rem; font-weight: 400;
           letter-spacing: 0.14em; text-transform: uppercase;
-          color: #9c8e7e; margin-bottom: 0.75rem;
+          color: var(--muted); margin-bottom: 0.75rem;
         }
 
         .active-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
 
         .tag-chip {
-          font-family: 'DM Mono', monospace;
+          font-family: var(--mono);
           font-size: 0.65rem; font-weight: 400;
           letter-spacing: 0.08em;
           padding: 0.35rem 0.8rem;
-          border: 1px solid #d4cfc8;
+          border: 1px solid var(--rule);
           background: transparent;
-          color: #4a443c;
+          color: var(--muted);
           cursor: default;
         }
 
-        .tag-chip.active { border-color: #e8694a; color: #e8694a; }
+        .tag-chip.active { border-color: var(--coral); color: var(--coral); }
 
         .edit-tags-btn {
-          font-family: 'DM Mono', monospace;
+          font-family: var(--mono);
           font-size: 0.6rem; font-weight: 300;
           letter-spacing: 0.1em; text-transform: uppercase;
-          color: #9c8e7e; background: transparent;
+          color: var(--muted); background: transparent;
           border: none; cursor: pointer; padding: 0;
+          transition: color 0.15s;
         }
-        .edit-tags-btn:hover { color: #1a1814; }
+        .edit-tags-btn:hover { color: var(--ink); }
 
         .picker-panel {
           margin-top: 1.5rem;
           padding: 1.5rem;
-          border: 1px solid #d4cfc8;
-          background: #faf8f4;
+          border: 1px solid var(--rule);
+          background: var(--warm-mid);
         }
 
         .picker-type-group { margin-bottom: 1.25rem; }
         .picker-type-label {
-          font-family: 'DM Mono', monospace;
+          font-family: var(--mono);
           font-size: 0.55rem; font-weight: 400;
           letter-spacing: 0.14em; text-transform: uppercase;
-          color: #9c8e7e; margin-bottom: 0.5rem;
+          color: var(--muted); margin-bottom: 0.5rem;
         }
 
         .picker-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 
         .picker-tag {
-          font-family: 'DM Mono', monospace;
+          font-family: var(--mono);
           font-size: 0.6rem; font-weight: 300;
           padding: 0.3rem 0.7rem;
-          border: 1px solid #d4cfc8;
+          border: 1px solid var(--rule);
           background: transparent;
-          color: #6b6058;
+          color: var(--muted);
           cursor: pointer;
           transition: all 0.15s ease;
         }
-        .picker-tag:hover { border-color: #1a1814; }
-        .picker-tag.selected { border-color: #e8694a; color: #e8694a; background: rgba(232,105,74,0.05); }
+        .picker-tag:hover { border-color: var(--ink); color: var(--ink); }
+        .picker-tag.selected { border-color: var(--coral); color: var(--coral); background: rgba(212,98,58,0.08); }
 
         .new-tag-form {
           display: flex; gap: 0.5rem; align-items: flex-end;
-          margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e8e4de;
+          margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--rule);
         }
 
         .new-tag-form input {
-          font-family: 'DM Mono', monospace; font-size: 0.7rem;
-          color: #1a1814; background: transparent; border: none;
-          border-bottom: 1px solid #d4cfc8; padding: 0.3rem 0;
+          font-family: var(--mono); font-size: 0.7rem;
+          color: var(--ink); background: transparent; border: none;
+          border-bottom: 1px solid var(--rule); padding: 0.3rem 0;
           outline: none; width: 140px;
         }
-        .new-tag-form input:focus { border-bottom-color: #e8694a; }
-        .new-tag-form input::placeholder { color: #c8c2ba; }
+        .new-tag-form input:focus { border-bottom-color: var(--coral); }
+        .new-tag-form input::placeholder { color: var(--rule); }
 
         .new-tag-form select {
-          font-family: 'DM Mono', monospace; font-size: 0.6rem;
-          color: #6b6058; background: transparent; border: none;
-          border-bottom: 1px solid #d4cfc8; padding: 0.3rem 0;
+          font-family: var(--mono); font-size: 0.6rem;
+          color: var(--muted); background: var(--parchment); border: none;
+          border-bottom: 1px solid var(--rule); padding: 0.3rem 0;
           outline: none;
         }
 
         .new-tag-form button {
-          font-family: 'DM Mono', monospace; font-size: 0.6rem;
+          font-family: var(--mono); font-size: 0.6rem;
           letter-spacing: 0.1em; text-transform: uppercase;
-          color: #f7f4ef; background: #1a1814; border: none;
+          color: var(--ink); background: var(--coral); border: none;
           padding: 0.4rem 0.8rem; cursor: pointer;
+          transition: opacity 0.15s;
         }
-        .new-tag-form button:hover { background: #e8694a; }
+        .new-tag-form button:hover { opacity: 0.85; }
       `}</style>
 
       <p className="tag-section-label">Tags</p>
