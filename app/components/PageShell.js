@@ -27,8 +27,7 @@ export default function PageShell({ active, children }) {
           color: var(--ink);
           text-decoration: none;
         }
-        .nav-logo span { color: var(--coral); }
-        .nav-logo em { font-style: italic; font-weight: 300; }
+        .nav-logo em { font-style: italic; font-weight: 300; color: var(--coral); }
 
         .nav-links {
           display: flex;
