@@ -2,8 +2,8 @@ export async function POST(request) {
   const VISION_KEY = process.env.GOOGLE_VISION_API_KEY
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY
 
-  if (!VISION_KEY) {
-    return Response.json({ error: 'GOOGLE_VISION_API_KEY not configured' }, { status: 500 })
+  if (!VISION_KEY && !ANTHROPIC_KEY) {
+    return Response.json({ error: 'No OCR API keys configured' }, { status: 500 })
   }
 
   let formData
@@ -22,6 +22,9 @@ export async function POST(request) {
     return Response.json({ error: 'Image too large (max 10MB)' }, { status: 400 })
   }
 
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  const mediaType = file.type || 'image/jpeg'
+
   let base64
   try {
     const bytes = await file.arrayBuffer()
@@ -30,61 +33,65 @@ export async function POST(request) {
     return Response.json({ error: 'Failed to read image file' }, { status: 500 })
   }
 
-  try {
-    // Call Google Cloud Vision — TEXT_DETECTION + WEB_DETECTION
-    const visionRes = await fetch(
-      `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requests: [{
-            image: { content: base64 },
-            features: [
-              { type: 'TEXT_DETECTION', maxResults: 1 },
-              { type: 'WEB_DETECTION', maxResults: 10 },
-            ],
-          }],
-        }),
+  // ── Try Google Vision first ──
+  let ocrText = ''
+  let webEntities = []
+  let bestGuess = ''
+  let matchingPageTitles = []
+  let visionWorked = false
+
+  if (VISION_KEY) {
+    try {
+      const visionRes = await fetch(
+        `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requests: [{
+              image: { content: base64 },
+              features: [
+                { type: 'TEXT_DETECTION', maxResults: 1 },
+                { type: 'WEB_DETECTION', maxResults: 10 },
+              ],
+            }],
+          }),
+        }
+      )
+
+      if (visionRes.ok) {
+        const visionData = await visionRes.json()
+        const response = visionData.responses?.[0]
+
+        if (response && !response.error) {
+          visionWorked = true
+          ocrText = response.fullTextAnnotation?.text || ''
+          const wd = response.webDetection || {}
+          bestGuess = (wd.bestGuessLabels || []).map(l => l.label).join(', ')
+          webEntities = (wd.webEntities || [])
+            .filter(e => e.description && e.score > 0.3)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 8)
+            .map(e => e.description)
+          matchingPageTitles = (wd.pagesWithMatchingImages || [])
+            .slice(0, 5)
+            .map(p => p.pageTitle)
+            .filter(Boolean)
+        }
       }
-    )
-
-    if (!visionRes.ok) {
-      const err = await visionRes.text()
-      console.error('Vision API error:', err)
-      return Response.json({ error: 'Google Vision API request failed' }, { status: 500 })
+    } catch (e) {
+      console.error('Vision API error:', e.message)
     }
+  }
 
-    const visionData = await visionRes.json()
-    const response = visionData.responses?.[0]
+  // ── Use Claude to interpret (with or without Vision data) ──
+  if (ANTHROPIC_KEY) {
+    try {
+      const Anthropic = (await import('@anthropic-ai/sdk')).default
+      const client = new Anthropic({ apiKey: ANTHROPIC_KEY })
 
-    // Extract OCR text
-    const ocrText = response?.fullTextAnnotation?.text || ''
-
-    // Extract web detection results
-    const webDetection = response?.webDetection || {}
-    const webEntities = webDetection.webEntities || []
-    const pagesWithMatching = webDetection.pagesWithMatchingImages || []
-    const bestGuessLabels = webDetection.bestGuessLabels || []
-
-    // Build context from web detection
-    const bestGuess = bestGuessLabels.map(l => l.label).join(', ')
-    const topEntities = webEntities
-      .filter(e => e.description && e.score > 0.3)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 8)
-      .map(e => e.description)
-    const matchingPageTitles = pagesWithMatching
-      .slice(0, 5)
-      .map(p => p.pageTitle)
-      .filter(Boolean)
-
-    // Use Claude to interpret the combined signals into structured book data
-    if (ANTHROPIC_KEY) {
-      try {
-        const Anthropic = (await import('@anthropic-ai/sdk')).default
-        const client = new Anthropic({ apiKey: ANTHROPIC_KEY })
-
+      if (visionWorked) {
+        // Vision + Claude: interpret combined signals
         const prompt = `You are identifying a cookbook from its cover photo. Here is all the data extracted:
 
 OCR TEXT FROM COVER:
@@ -94,7 +101,7 @@ GOOGLE VISION BEST GUESS:
 ${bestGuess || '(none)'}
 
 WEB ENTITIES (by relevance):
-${topEntities.join(', ') || '(none)'}
+${webEntities.join(', ') || '(none)'}
 
 MATCHING WEB PAGE TITLES:
 ${matchingPageTitles.join('\n') || '(none)'}
@@ -120,32 +127,65 @@ Use empty string for anything you cannot determine. Be precise with the title an
             author: parsed.author || '',
             publisher: parsed.publisher || '',
             _source: 'vision+claude',
-            _webEntities: topEntities,
           })
         }
-      } catch (e) {
-        console.error('Claude interpretation failed, falling back:', e.message)
-      }
-    }
+      } else {
+        // Claude-only: send the image directly
+        if (!validTypes.includes(mediaType)) {
+          return Response.json({ error: `Unsupported image type: ${mediaType}` }, { status: 400 })
+        }
 
-    // Fallback: return raw Vision data structured as best we can
-    // Try to use best guess and entities to fill in
+        const aiRes = await client.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 512,
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: { type: 'base64', media_type: mediaType, data: base64 },
+              },
+              {
+                type: 'text',
+                text: `Look at this cookbook cover photo. Extract whatever text you can see. Return ONLY a JSON object with these fields. Use empty string "" for anything you cannot find:
+
+{"title": "", "subtitle": "", "author": "", "publisher": ""}
+
+Return ONLY the JSON, no explanation.`,
+              },
+            ],
+          }],
+        })
+
+        const aiText = aiRes.content[0]?.text || ''
+        const jsonMatch = aiText.match(/\{[\s\S]*?\}/)
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0])
+          return Response.json({
+            title: parsed.title || '',
+            subtitle: parsed.subtitle || '',
+            author: parsed.author || '',
+            publisher: parsed.publisher || '',
+            _source: 'claude_vision',
+          })
+        }
+      }
+    } catch (e) {
+      console.error('Claude OCR error:', e.message)
+      return Response.json({ error: `OCR failed: ${e.message}` }, { status: 500 })
+    }
+  }
+
+  // Fallback: return whatever Vision gave us
+  if (visionWorked) {
     return Response.json({
-      title: bestGuess || topEntities[0] || '',
+      title: bestGuess || webEntities[0] || '',
       subtitle: '',
-      author: topEntities.find(e =>
-        !e.toLowerCase().includes('book') &&
-        !e.toLowerCase().includes('cookbook') &&
-        !e.toLowerCase().includes('recipe')
-      ) || '',
+      author: '',
       publisher: '',
       _source: 'vision_only',
-      _ocrText: ocrText.slice(0, 500),
-      _webEntities: topEntities,
     })
-
-  } catch (e) {
-    console.error('OCR error:', e.message)
-    return Response.json({ error: `OCR failed: ${e.message}` }, { status: 500 })
   }
+
+  return Response.json({ error: 'All OCR methods failed' }, { status: 500 })
 }
