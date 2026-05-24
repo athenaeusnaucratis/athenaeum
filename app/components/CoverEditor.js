@@ -1,43 +1,35 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import Cropper from 'react-easy-crop'
 
-// Utility: get cropped image blob from canvas
+const MAX_IMAGES = 4
+
 function getCroppedImg(imageSrc, pixelCrop, rotation = 0, brightness = 100, contrast = 100) {
   return new Promise((resolve) => {
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => {
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-
-      // Handle rotation
       const rad = (rotation * Math.PI) / 180
       const sin = Math.abs(Math.sin(rad))
       const cos = Math.abs(Math.cos(rad))
       const rotW = img.width * cos + img.height * sin
       const rotH = img.width * sin + img.height * cos
 
-      // Temp canvas for rotation + filters
-      const tmpCanvas = document.createElement('canvas')
-      tmpCanvas.width = rotW
-      tmpCanvas.height = rotH
-      const tmpCtx = tmpCanvas.getContext('2d')
-      tmpCtx.filter = `brightness(${brightness}%) contrast(${contrast}%)`
-      tmpCtx.translate(rotW / 2, rotH / 2)
-      tmpCtx.rotate(rad)
-      tmpCtx.drawImage(img, -img.width / 2, -img.height / 2)
+      const tmp = document.createElement('canvas')
+      tmp.width = rotW
+      tmp.height = rotH
+      const tCtx = tmp.getContext('2d')
+      tCtx.filter = `brightness(${brightness}%) contrast(${contrast}%)`
+      tCtx.translate(rotW / 2, rotH / 2)
+      tCtx.rotate(rad)
+      tCtx.drawImage(img, -img.width / 2, -img.height / 2)
 
-      // Crop from the rotated+filtered image
+      const canvas = document.createElement('canvas')
       canvas.width = pixelCrop.width
       canvas.height = pixelCrop.height
-      ctx.drawImage(
-        tmpCanvas,
-        pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
-        0, 0, pixelCrop.width, pixelCrop.height
-      )
-
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(tmp, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height)
       canvas.toBlob(resolve, 'image/jpeg', 0.92)
     }
     img.onerror = () => resolve(null)
@@ -46,27 +38,44 @@ function getCroppedImg(imageSrc, pixelCrop, rotation = 0, brightness = 100, cont
 }
 
 export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
-  const [coverUrl, setCoverUrl] = useState(initialUrl || '')
+  const [images, setImages] = useState([])
+  const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [editing, setEditing] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(null)
-  const [previewFile, setPreviewFile] = useState(null)
+  const [activeIndex, setActiveIndex] = useState(0)
 
   // Crop state
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
-
-  // Adjustments
   const [rotation, setRotation] = useState(0)
   const [brightness, setBrightness] = useState(100)
   const [contrast, setContrast] = useState(100)
 
-  const fileRef = useRef(null)
+  const cameraRef = useRef(null)
+  const uploadRef = useRef(null)
 
-  const onCropComplete = useCallback((_, croppedPixels) => {
-    setCroppedAreaPixels(croppedPixels)
-  }, [])
+  // Load existing images
+  useEffect(() => {
+    fetch(`/api/books/${bookId}/images`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setImages(data)
+        setLoading(false)
+      })
+      .catch(() => {
+        // Fallback: if book_images table doesn't exist yet, use cover_image_url
+        if (initialUrl) {
+          setImages([{ id: 'legacy', image_url: initialUrl, is_cover: true }])
+        }
+        setLoading(false)
+      })
+  }, [bookId, initialUrl])
+
+  const onCropComplete = useCallback((_, px) => setCroppedAreaPixels(px), [])
+
+  const coverUrl = images.find(i => i.is_cover)?.image_url || images[0]?.image_url || initialUrl || ''
 
   function resetEdits() {
     setCrop({ x: 0, y: 0 })
@@ -80,13 +89,14 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
   function handleFileSelect(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    setPreviewFile(file)
     setPreviewUrl(URL.createObjectURL(file))
     resetEdits()
     setEditing(true)
+    // Reset input so same file can be selected again
+    e.target.value = ''
   }
 
-  async function handleUpload() {
+  async function handleSave() {
     if (!previewUrl || !croppedAreaPixels) return
     setUploading(true)
     try {
@@ -94,33 +104,48 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
       if (blob) {
         const fd = new FormData()
         fd.append('file', new File([blob], 'cover.jpg', { type: 'image/jpeg' }))
-        const res = await fetch(`/api/books/${bookId}/cover`, { method: 'POST', body: fd })
-        const data = await res.json()
-        if (res.ok && data.cover_image_url) {
-          setCoverUrl(data.cover_image_url + '?t=' + Date.now())
+        const res = await fetch(`/api/books/${bookId}/images`, { method: 'POST', body: fd })
+        if (res.ok) {
+          const img = await res.json()
+          setImages(prev => [...prev, img])
           setPreviewUrl(null)
-          setPreviewFile(null)
           setEditing(false)
+        } else {
+          const err = await res.json()
+          alert(err.error || 'Upload failed')
         }
       }
     } catch {}
     setUploading(false)
   }
 
+  async function handleDelete(imageId) {
+    if (!confirm('Delete this photo?')) return
+    const res = await fetch(`/api/books/${bookId}/images`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_id: imageId }),
+    })
+    if (res.ok) {
+      setImages(prev => prev.filter(i => i.id !== imageId))
+      if (activeIndex >= images.length - 1) setActiveIndex(Math.max(0, images.length - 2))
+    }
+  }
+
   function handleRetake() {
     setPreviewUrl(null)
-    setPreviewFile(null)
     setEditing(false)
     resetEdits()
-    setTimeout(() => fileRef.current?.click(), 100)
+    setTimeout(() => cameraRef.current?.click(), 100)
   }
 
   function handleCancel() {
     setPreviewUrl(null)
-    setPreviewFile(null)
     setEditing(false)
     resetEdits()
   }
+
+  const canAdd = images.length < MAX_IMAGES
 
   return (
     <div className="cover-editor">
@@ -129,11 +154,12 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 1.2rem;
+          gap: 1rem;
           width: 100%;
         }
 
-        .cover-editor .book-cover-detail {
+        /* ── MAIN IMAGE ── */
+        .ce-main-image {
           position: relative;
           width: 100%;
           max-width: 280px;
@@ -144,9 +170,8 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
           justify-content: center;
           overflow: hidden;
           background: var(--warm-mid);
-          cursor: pointer;
         }
-        .cover-editor .book-cover-detail img {
+        .ce-main-image img {
           width: 100%;
           height: 100%;
           object-fit: cover;
@@ -171,23 +196,76 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
           text-transform: uppercase;
         }
 
-        .cover-hover-overlay {
+        /* ── THUMBNAILS ── */
+        .ce-thumbs {
+          display: flex;
+          gap: 0.5rem;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+        .ce-thumb {
+          width: 48px;
+          height: 64px;
+          border: 1px solid var(--rule);
+          overflow: hidden;
+          cursor: pointer;
+          opacity: 0.6;
+          transition: opacity 0.15s, border-color 0.15s;
+          position: relative;
+          flex-shrink: 0;
+        }
+        .ce-thumb.active {
+          opacity: 1;
+          border-color: var(--coral);
+        }
+        .ce-thumb:hover { opacity: 1; }
+        .ce-thumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .ce-thumb-delete {
           position: absolute;
-          inset: 0;
-          background: rgba(0,0,0,0.5);
+          top: 1px;
+          right: 1px;
+          width: 14px;
+          height: 14px;
+          background: rgba(0,0,0,0.6);
+          color: #fff;
+          font-size: 9px;
+          line-height: 14px;
+          text-align: center;
+          cursor: pointer;
+          opacity: 0;
+          transition: opacity 0.15s;
+          border: none;
+          padding: 0;
+        }
+        .ce-thumb:hover .ce-thumb-delete { opacity: 1; }
+
+        .ce-add-thumb {
+          width: 48px;
+          height: 64px;
+          border: 1px dashed var(--rule);
           display: flex;
           align-items: center;
           justify-content: center;
-          opacity: 0;
-          transition: opacity 0.2s;
+          cursor: pointer;
+          transition: border-color 0.15s, color 0.15s;
+          background: transparent;
+          color: var(--muted);
+          font-size: 1.1rem;
+          padding: 0;
+          flex-shrink: 0;
         }
-        .book-cover-detail:hover .cover-hover-overlay { opacity: 1; }
-        .cover-hover-text {
-          font-family: var(--mono);
-          font-size: 0.6rem;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: #fff;
+        .ce-add-thumb:hover { border-color: var(--coral); color: var(--coral); }
+
+        /* ── ADD BUTTONS ── */
+        .ce-add-buttons {
+          display: flex;
+          gap: 0.5rem;
+          justify-content: center;
         }
 
         /* ── CROP AREA ── */
@@ -200,14 +278,10 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
           overflow: hidden;
           background: #000;
         }
-
-        /* Override react-easy-crop styles for dark theme */
         .crop-container .reactEasyCrop_CropArea {
           border: 2px solid var(--coral) !important;
-          color: rgba(0,0,0,0.6) !important;
         }
 
-        /* ── EDIT CONTROLS ── */
         .edit-controls {
           display: flex;
           flex-direction: column;
@@ -215,7 +289,6 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
           width: 100%;
           max-width: 320px;
         }
-
         .edit-slider-row {
           display: flex;
           align-items: center;
@@ -299,20 +372,21 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
           line-height: 1;
         }
         .ce-btn-rotate:hover { border-color: var(--coral); color: var(--coral); }
+
+        .ce-count {
+          font-family: var(--mono);
+          font-size: 0.55rem;
+          color: var(--muted);
+          letter-spacing: 0.08em;
+          text-align: center;
+        }
       `}</style>
 
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        style={{ display: 'none' }}
-        onChange={handleFileSelect}
-      />
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileSelect} />
+      <input ref={uploadRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileSelect} />
 
       {editing && previewUrl ? (
         <>
-          {/* Cropper */}
           <div className="crop-container">
             <Cropper
               image={previewUrl}
@@ -324,73 +398,91 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
               style={{
-                mediaStyle: {
-                  filter: `brightness(${brightness}%) contrast(${contrast}%)`,
-                },
+                mediaStyle: { filter: `brightness(${brightness}%) contrast(${contrast}%)` },
               }}
             />
           </div>
 
-          {/* Controls */}
           <div className="edit-controls">
             <div className="edit-slider-row">
               <span className="edit-slider-label">Zoom</span>
-              <input
-                type="range" className="edit-slider"
-                min="1" max="3" step="0.05" value={zoom}
-                onChange={e => setZoom(Number(e.target.value))}
-              />
+              <input type="range" className="edit-slider" min="1" max="3" step="0.05" value={zoom} onChange={e => setZoom(Number(e.target.value))} />
               <span className="edit-slider-val">{zoom.toFixed(1)}x</span>
             </div>
             <div className="edit-slider-row">
               <span className="edit-slider-label">Brightness</span>
-              <input
-                type="range" className="edit-slider"
-                min="50" max="150" value={brightness}
-                onChange={e => setBrightness(Number(e.target.value))}
-              />
+              <input type="range" className="edit-slider" min="50" max="150" value={brightness} onChange={e => setBrightness(Number(e.target.value))} />
               <span className="edit-slider-val">{brightness}%</span>
             </div>
             <div className="edit-slider-row">
               <span className="edit-slider-label">Contrast</span>
-              <input
-                type="range" className="edit-slider"
-                min="50" max="150" value={contrast}
-                onChange={e => setContrast(Number(e.target.value))}
-              />
+              <input type="range" className="edit-slider" min="50" max="150" value={contrast} onChange={e => setContrast(Number(e.target.value))} />
               <span className="edit-slider-val">{contrast}%</span>
             </div>
           </div>
 
           <div className="edit-actions">
-            <button className="ce-btn ce-btn-rotate" onClick={() => setRotation(r => (r + 90) % 360)} title="Rotate">
-              ↻
+            <button className="ce-btn ce-btn-rotate" onClick={() => setRotation(r => (r + 90) % 360)} title="Rotate">↻</button>
+            <button className="ce-btn ce-btn-primary" onClick={handleSave} disabled={uploading}>
+              {uploading ? 'Uploading…' : 'Save'}
             </button>
-            <button className="ce-btn ce-btn-primary" onClick={handleUpload} disabled={uploading}>
-              {uploading ? 'Uploading…' : 'Use Photo'}
-            </button>
-            <button className="ce-btn ce-btn-secondary" onClick={handleRetake}>
-              Retake
-            </button>
-            <button className="ce-btn ce-btn-ghost" onClick={handleCancel}>
-              Cancel
-            </button>
+            <button className="ce-btn ce-btn-secondary" onClick={handleRetake}>Retake</button>
+            <button className="ce-btn ce-btn-ghost" onClick={handleCancel}>Cancel</button>
           </div>
         </>
       ) : (
-        <div className="book-cover-detail" onClick={() => fileRef.current?.click()}>
-          {coverUrl ? (
-            <img src={coverUrl} alt={bookTitle} />
-          ) : (
-            <>
-              <span className="cover-placeholder">{bookTitle}</span>
-              <span className="cover-no-image">No cover image</span>
-            </>
-          )}
-          <div className="cover-hover-overlay">
-            <span className="cover-hover-text">{coverUrl ? 'Change Cover' : 'Add Cover'}</span>
+        <>
+          {/* Main display image */}
+          <div className="ce-main-image">
+            {images.length > 0 ? (
+              <img src={images[activeIndex]?.image_url || coverUrl} alt={bookTitle} />
+            ) : coverUrl ? (
+              <img src={coverUrl} alt={bookTitle} />
+            ) : (
+              <>
+                <span className="cover-placeholder">{bookTitle}</span>
+                <span className="cover-no-image">No cover image</span>
+              </>
+            )}
           </div>
-        </div>
+
+          {/* Thumbnail strip */}
+          {(images.length > 0 || canAdd) && (
+            <div className="ce-thumbs">
+              {images.map((img, i) => (
+                <div
+                  key={img.id}
+                  className={`ce-thumb${i === activeIndex ? ' active' : ''}`}
+                  onClick={() => setActiveIndex(i)}
+                >
+                  <img src={img.image_url} alt="" />
+                  {img.id !== 'legacy' && (
+                    <button className="ce-thumb-delete" onClick={e => { e.stopPropagation(); handleDelete(img.id) }}>×</button>
+                  )}
+                </div>
+              ))}
+              {canAdd && (
+                <button className="ce-add-thumb" onClick={() => {}} title="Add photo">+</button>
+              )}
+            </div>
+          )}
+
+          {/* Add buttons */}
+          {canAdd && (
+            <div className="ce-add-buttons">
+              <button className="ce-btn ce-btn-secondary" onClick={() => cameraRef.current?.click()}>
+                Take Photo
+              </button>
+              <button className="ce-btn ce-btn-secondary" onClick={() => uploadRef.current?.click()}>
+                Upload Photo
+              </button>
+            </div>
+          )}
+
+          {images.length > 0 && (
+            <div className="ce-count">{images.length} / {MAX_IMAGES} photos</div>
+          )}
+        </>
       )}
     </div>
   )
