@@ -6,6 +6,7 @@ import ReadStatusPicker from '@/app/components/ReadStatusPicker'
 import BookEditor from '@/app/components/BookEditor'
 import ValuePanel from '@/app/components/ValuePanel'
 import CollectionPicker from '@/app/components/CollectionPicker'
+import CoverEditor from '@/app/components/CoverEditor'
 import DeleteBook from '@/app/components/DeleteBook'
 import MetadataRefresh from '@/app/components/MetadataRefresh'
 import Link from 'next/link'
@@ -670,16 +671,7 @@ export default async function BookPage({ params }) {
         {/* LEFT: COVER */}
         <div className="cover-col">
           <div className="cover-wrap">
-            <div className="book-cover-detail">
-              {book.cover_image_url ? (
-                <img src={book.cover_image_url} alt={book.title} />
-              ) : (
-                <>
-                  <span className="cover-placeholder">{book.title}</span>
-                  <span className="cover-no-image">No cover image</span>
-                </>
-              )}
-            </div>
+            <CoverEditor bookId={id} initialUrl={book.cover_image_url} bookTitle={book.title} />
 
             <div className="value-badge">
               <span className="value-label">Est. value</span>
