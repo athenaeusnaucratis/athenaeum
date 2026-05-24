@@ -16,6 +16,7 @@ export default function AddBookFlow() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [captureMethod, setCaptureMethod] = useState('manual')
   const [error, setError] = useState(null)
+  const [ocrWarning, setOcrWarning] = useState(null)
   const [newBookId, setNewBookId] = useState(null)
   const [coverFile, setCoverFile] = useState(null)
   const [coverPreviewUrl, setCoverPreviewUrl] = useState(null)
@@ -69,7 +70,6 @@ export default function AddBookFlow() {
 
   function stopScanner() {
     try { scannerRef.current?.reset() } catch {}
-    // Force-stop all camera tracks — reset() alone doesn't always release them on mobile
     try {
       const stream = videoRef.current?.srcObject
       if (stream) {
@@ -82,7 +82,6 @@ export default function AddBookFlow() {
   async function lookUpIsbn(isbn) {
     setStage('looking_up')
     setError(null)
-    // Strip any non-digit characters
     const clean = isbn.replace(/[^0-9Xx]/g, '')
     try {
       const res = await fetch(`/api/isbn/${clean}`)
@@ -103,37 +102,80 @@ export default function AddBookFlow() {
     setCaptureMethod('manual')
     setCoverFile(null)
     setCoverPreviewUrl(null)
+    setError(null)
+    setOcrWarning(null)
     setStage('confirm')
   }
 
-  function handleCoverSelect(e) {
+  // Auto-run OCR when a cover photo is selected
+  async function handleCoverAndOCR(e) {
     const file = e.target.files?.[0]
     if (!file) return
+
     setCoverFile(file)
     setCoverPreviewUrl(URL.createObjectURL(file))
+    setCaptureMethod('cover_ocr')
+    setError(null)
+    setOcrWarning(null)
+    setStage('ocr_processing')
+
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/ocr', { method: 'POST', body: fd })
+      const data = await res.json()
+
+      if (!res.ok) {
+        // OCR failed — go to form anyway, user can fill manually
+        setOcrWarning(data.error || 'OCR could not read the cover. Fill in details manually.')
+      } else {
+        // Apply extracted fields (only overwrite empty fields or all if form is empty)
+        setForm(prev => ({
+          ...prev,
+          title: data.title || prev.title,
+          subtitle: data.subtitle || prev.subtitle,
+          author: data.author || prev.author,
+          publisher: data.publisher || prev.publisher,
+        }))
+        if (data._warning) {
+          setOcrWarning(data._warning)
+        }
+      }
+    } catch (e) {
+      setOcrWarning('OCR request failed. Fill in details manually.')
+    }
+
+    setStage('confirm')
   }
 
-  async function handleOCR() {
+  // Manual OCR retry from the confirm form
+  async function handleRetryOCR() {
     if (!coverFile) return
+    setOcrWarning(null)
     setStage('ocr_processing')
-    setError(null)
+
     try {
       const fd = new FormData()
       fd.append('file', coverFile)
       const res = await fetch('/api/ocr', { method: 'POST', body: fd })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'OCR failed')
-      setForm(prev => ({
-        ...prev,
-        title: data.title || prev.title,
-        subtitle: data.subtitle || prev.subtitle,
-        author: data.author || prev.author,
-        publisher: data.publisher || prev.publisher,
-      }))
-      setCaptureMethod('cover_ocr')
-    } catch (e) {
-      setError(e.message + ' — fill in fields manually.')
+
+      if (!res.ok) {
+        setOcrWarning(data.error || 'OCR failed again.')
+      } else {
+        setForm(prev => ({
+          ...prev,
+          title: data.title || prev.title,
+          subtitle: data.subtitle || prev.subtitle,
+          author: data.author || prev.author,
+          publisher: data.publisher || prev.publisher,
+        }))
+        if (data._warning) setOcrWarning(data._warning)
+      }
+    } catch {
+      setOcrWarning('OCR request failed.')
     }
+
     setStage('confirm')
   }
 
@@ -141,6 +183,7 @@ export default function AddBookFlow() {
     e.preventDefault()
     if (!form.title.trim()) { setError('Title is required.'); return }
     setError(null)
+    setOcrWarning(null)
     setStage('saving')
 
     try {
@@ -163,9 +206,13 @@ export default function AddBookFlow() {
       // Upload cover photo if we have one
       if (coverFile) {
         setUploadingCover(true)
-        const fd = new FormData()
-        fd.append('file', coverFile)
-        await fetch(`/api/books/${bookId}/cover`, { method: 'POST', body: fd })
+        try {
+          const fd = new FormData()
+          fd.append('file', coverFile)
+          await fetch(`/api/books/${bookId}/cover`, { method: 'POST', body: fd })
+        } catch {
+          // Cover upload failure shouldn't block the book save
+        }
         setUploadingCover(false)
       }
 
@@ -213,11 +260,7 @@ export default function AddBookFlow() {
         accept="image/*"
         capture="environment"
         style={{ display: 'none' }}
-        onChange={(e) => {
-          handleCoverSelect(e)
-          setCaptureMethod('cover_ocr')
-          setStage('confirm')
-        }}
+        onChange={handleCoverAndOCR}
       />
       {error && <p className="flow-error">{error}</p>}
     </div>
@@ -253,6 +296,7 @@ export default function AddBookFlow() {
     <form className="book-form" onSubmit={handleSubmit}>
       <p className="flow-hint">Review and confirm the details</p>
       {error && <p className="flow-error">{error}</p>}
+      {ocrWarning && <p className="flow-warning">{ocrWarning}</p>}
 
       {/* Cover photo section */}
       <div className="cover-section">
@@ -260,8 +304,8 @@ export default function AddBookFlow() {
           <div className="cover-with-ocr">
             <img src={coverPreviewUrl} alt="Cover" className="cover-preview" />
             <div className="cover-actions">
-              <button type="button" className="btn-ghost" onClick={handleOCR}>
-                Extract text from cover
+              <button type="button" className="btn-ghost" onClick={handleRetryOCR}>
+                Re-read cover with AI
               </button>
               <button type="button" className="btn-ghost" onClick={() => {
                 setCoverFile(null); setCoverPreviewUrl(null)
@@ -283,7 +327,12 @@ export default function AddBookFlow() {
           accept="image/*"
           capture="environment"
           style={{ display: 'none' }}
-          onChange={handleCoverSelect}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (!file) return
+            setCoverFile(file)
+            setCoverPreviewUrl(URL.createObjectURL(file))
+          }}
         />
       </div>
 
@@ -304,7 +353,10 @@ export default function AddBookFlow() {
         <button type="submit" className="btn-primary">
           {uploadingCover ? 'Uploading cover…' : 'Save Book'}
         </button>
-        <button type="button" className="btn-ghost" onClick={() => { setStage('idle'); setCoverFile(null); setCoverPreviewUrl(null) }}>Back</button>
+        <button type="button" className="btn-ghost" onClick={() => {
+          setStage('idle'); setCoverFile(null); setCoverPreviewUrl(null)
+          setError(null); setOcrWarning(null)
+        }}>Back</button>
       </div>
     </form>
   )
@@ -324,7 +376,8 @@ export default function AddBookFlow() {
       <div className="flow-buttons">
         <Link href={`/books/${newBookId}`} className="btn-primary">View Book</Link>
         <button className="btn-secondary" onClick={() => {
-          setForm(EMPTY_FORM); setCoverFile(null); setCoverPreviewUrl(null); setStage('idle')
+          setForm(EMPTY_FORM); setCoverFile(null); setCoverPreviewUrl(null)
+          setError(null); setOcrWarning(null); setStage('idle')
         }}>
           Add Another
         </button>

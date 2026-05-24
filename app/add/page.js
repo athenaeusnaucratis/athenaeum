@@ -63,6 +63,13 @@ export default function AddBookPage() {
           color: var(--coral);
         }
 
+        .flow-warning {
+          font-family: var(--mono);
+          font-size: 0.68rem;
+          color: var(--muted);
+          font-style: italic;
+        }
+
         .flow-success {
           font-family: var(--serif);
           font-size: 1.2rem;
