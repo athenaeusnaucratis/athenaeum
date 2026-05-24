@@ -1,6 +1,49 @@
 'use client'
 
 import { useRef, useState, useCallback } from 'react'
+import Cropper from 'react-easy-crop'
+
+// Utility: get cropped image blob from canvas
+function getCroppedImg(imageSrc, pixelCrop, rotation = 0, brightness = 100, contrast = 100) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+
+      // Handle rotation
+      const rad = (rotation * Math.PI) / 180
+      const sin = Math.abs(Math.sin(rad))
+      const cos = Math.abs(Math.cos(rad))
+      const rotW = img.width * cos + img.height * sin
+      const rotH = img.width * sin + img.height * cos
+
+      // Temp canvas for rotation + filters
+      const tmpCanvas = document.createElement('canvas')
+      tmpCanvas.width = rotW
+      tmpCanvas.height = rotH
+      const tmpCtx = tmpCanvas.getContext('2d')
+      tmpCtx.filter = `brightness(${brightness}%) contrast(${contrast}%)`
+      tmpCtx.translate(rotW / 2, rotH / 2)
+      tmpCtx.rotate(rad)
+      tmpCtx.drawImage(img, -img.width / 2, -img.height / 2)
+
+      // Crop from the rotated+filtered image
+      canvas.width = pixelCrop.width
+      canvas.height = pixelCrop.height
+      ctx.drawImage(
+        tmpCanvas,
+        pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
+        0, 0, pixelCrop.width, pixelCrop.height
+      )
+
+      canvas.toBlob(resolve, 'image/jpeg', 0.92)
+    }
+    img.onerror = () => resolve(null)
+    img.src = imageSrc
+  })
+}
 
 export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
   const [coverUrl, setCoverUrl] = useState(initialUrl || '')
@@ -8,88 +51,67 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
   const [editing, setEditing] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [previewFile, setPreviewFile] = useState(null)
+
+  // Crop state
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
+
+  // Adjustments
   const [rotation, setRotation] = useState(0)
   const [brightness, setBrightness] = useState(100)
   const [contrast, setContrast] = useState(100)
+
   const fileRef = useRef(null)
-  const canvasRef = useRef(null)
+
+  const onCropComplete = useCallback((_, croppedPixels) => {
+    setCroppedAreaPixels(croppedPixels)
+  }, [])
+
+  function resetEdits() {
+    setCrop({ x: 0, y: 0 })
+    setZoom(1)
+    setRotation(0)
+    setBrightness(100)
+    setContrast(100)
+    setCroppedAreaPixels(null)
+  }
 
   function handleFileSelect(e) {
     const file = e.target.files?.[0]
     if (!file) return
     setPreviewFile(file)
     setPreviewUrl(URL.createObjectURL(file))
-    setRotation(0)
-    setBrightness(100)
-    setContrast(100)
+    resetEdits()
     setEditing(true)
   }
 
-  async function handleUpload(file) {
+  async function handleUpload() {
+    if (!previewUrl || !croppedAreaPixels) return
     setUploading(true)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch(`/api/books/${bookId}/cover`, { method: 'POST', body: fd })
-      const data = await res.json()
-      if (res.ok && data.cover_image_url) {
-        setCoverUrl(data.cover_image_url + '?t=' + Date.now())
-        setPreviewUrl(null)
-        setPreviewFile(null)
-        setEditing(false)
+      const blob = await getCroppedImg(previewUrl, croppedAreaPixels, rotation, brightness, contrast)
+      if (blob) {
+        const fd = new FormData()
+        fd.append('file', new File([blob], 'cover.jpg', { type: 'image/jpeg' }))
+        const res = await fetch(`/api/books/${bookId}/cover`, { method: 'POST', body: fd })
+        const data = await res.json()
+        if (res.ok && data.cover_image_url) {
+          setCoverUrl(data.cover_image_url + '?t=' + Date.now())
+          setPreviewUrl(null)
+          setPreviewFile(null)
+          setEditing(false)
+        }
       }
     } catch {}
     setUploading(false)
-  }
-
-  async function handleUsePhoto() {
-    if (!previewFile) return
-
-    // If edits were made, render through canvas
-    if (rotation !== 0 || brightness !== 100 || contrast !== 100) {
-      const blob = await renderEditedImage()
-      if (blob) {
-        const file = new File([blob], 'cover.jpg', { type: 'image/jpeg' })
-        await handleUpload(file)
-        return
-      }
-    }
-
-    await handleUpload(previewFile)
-  }
-
-  function renderEditedImage() {
-    return new Promise((resolve) => {
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => {
-        const canvas = canvasRef.current || document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-
-        const isRotated = rotation % 180 !== 0
-        canvas.width = isRotated ? img.height : img.width
-        canvas.height = isRotated ? img.width : img.height
-
-        ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`
-        ctx.translate(canvas.width / 2, canvas.height / 2)
-        ctx.rotate((rotation * Math.PI) / 180)
-        ctx.drawImage(img, -img.width / 2, -img.height / 2)
-
-        canvas.toBlob(resolve, 'image/jpeg', 0.9)
-      }
-      img.onerror = () => resolve(null)
-      img.src = previewUrl
-    })
   }
 
   function handleRetake() {
     setPreviewUrl(null)
     setPreviewFile(null)
     setEditing(false)
-    setRotation(0)
-    setBrightness(100)
-    setContrast(100)
-    // Re-open file picker
+    resetEdits()
     setTimeout(() => fileRef.current?.click(), 100)
   }
 
@@ -97,17 +119,19 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
     setPreviewUrl(null)
     setPreviewFile(null)
     setEditing(false)
-    setRotation(0)
-    setBrightness(100)
-    setContrast(100)
+    resetEdits()
   }
-
-  const hasEdits = rotation !== 0 || brightness !== 100 || contrast !== 100
 
   return (
     <div className="cover-editor">
       <style>{`
-        .cover-editor { display: flex; flex-direction: column; align-items: center; gap: 1.2rem; }
+        .cover-editor {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1.2rem;
+          width: 100%;
+        }
 
         .cover-editor .book-cover-detail {
           position: relative;
@@ -120,6 +144,7 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
           justify-content: center;
           overflow: hidden;
           background: var(--warm-mid);
+          cursor: pointer;
         }
         .cover-editor .book-cover-detail img {
           width: 100%;
@@ -155,7 +180,6 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
           justify-content: center;
           opacity: 0;
           transition: opacity 0.2s;
-          cursor: pointer;
         }
         .book-cover-detail:hover .cover-hover-overlay { opacity: 1; }
         .cover-hover-text {
@@ -166,31 +190,30 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
           color: #fff;
         }
 
-        /* ── EDIT MODE ── */
-        .edit-preview {
+        /* ── CROP AREA ── */
+        .crop-container {
+          position: relative;
           width: 100%;
-          max-width: 280px;
+          max-width: 320px;
           aspect-ratio: 2/3;
           border: 1px solid var(--coral);
           overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: var(--warm-mid);
-        }
-        .edit-preview img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
+          background: #000;
         }
 
+        /* Override react-easy-crop styles for dark theme */
+        .crop-container .reactEasyCrop_CropArea {
+          border: 2px solid var(--coral) !important;
+          color: rgba(0,0,0,0.6) !important;
+        }
+
+        /* ── EDIT CONTROLS ── */
         .edit-controls {
           display: flex;
           flex-direction: column;
-          gap: 0.8rem;
+          gap: 0.7rem;
           width: 100%;
-          max-width: 280px;
+          max-width: 320px;
         }
 
         .edit-slider-row {
@@ -226,7 +249,7 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
           font-family: var(--mono);
           font-size: 0.55rem;
           color: var(--muted);
-          min-width: 28px;
+          min-width: 32px;
           text-align: right;
         }
 
@@ -276,16 +299,8 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
           line-height: 1;
         }
         .ce-btn-rotate:hover { border-color: var(--coral); color: var(--coral); }
-
-        .upload-status {
-          font-family: var(--mono);
-          font-size: 0.6rem;
-          color: var(--coral);
-          letter-spacing: 0.06em;
-        }
       `}</style>
 
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
       <input
         ref={fileRef}
         type="file"
@@ -297,25 +312,40 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
 
       {editing && previewUrl ? (
         <>
-          {/* Preview with edits applied via CSS */}
-          <div className="edit-preview">
-            <img
-              src={previewUrl}
-              alt="Preview"
+          {/* Cropper */}
+          <div className="crop-container">
+            <Cropper
+              image={previewUrl}
+              crop={crop}
+              zoom={zoom}
+              rotation={rotation}
+              aspect={2 / 3}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
               style={{
-                transform: `rotate(${rotation}deg)`,
-                filter: `brightness(${brightness}%) contrast(${contrast}%)`,
+                mediaStyle: {
+                  filter: `brightness(${brightness}%) contrast(${contrast}%)`,
+                },
               }}
             />
           </div>
 
-          {/* Edit controls */}
+          {/* Controls */}
           <div className="edit-controls">
+            <div className="edit-slider-row">
+              <span className="edit-slider-label">Zoom</span>
+              <input
+                type="range" className="edit-slider"
+                min="1" max="3" step="0.05" value={zoom}
+                onChange={e => setZoom(Number(e.target.value))}
+              />
+              <span className="edit-slider-val">{zoom.toFixed(1)}x</span>
+            </div>
             <div className="edit-slider-row">
               <span className="edit-slider-label">Brightness</span>
               <input
-                type="range"
-                className="edit-slider"
+                type="range" className="edit-slider"
                 min="50" max="150" value={brightness}
                 onChange={e => setBrightness(Number(e.target.value))}
               />
@@ -324,8 +354,7 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
             <div className="edit-slider-row">
               <span className="edit-slider-label">Contrast</span>
               <input
-                type="range"
-                className="edit-slider"
+                type="range" className="edit-slider"
                 min="50" max="150" value={contrast}
                 onChange={e => setContrast(Number(e.target.value))}
               />
@@ -337,7 +366,7 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
             <button className="ce-btn ce-btn-rotate" onClick={() => setRotation(r => (r + 90) % 360)} title="Rotate">
               ↻
             </button>
-            <button className="ce-btn ce-btn-primary" onClick={handleUsePhoto} disabled={uploading}>
+            <button className="ce-btn ce-btn-primary" onClick={handleUpload} disabled={uploading}>
               {uploading ? 'Uploading…' : 'Use Photo'}
             </button>
             <button className="ce-btn ce-btn-secondary" onClick={handleRetake}>
@@ -349,22 +378,19 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
           </div>
         </>
       ) : (
-        <>
-          {/* Normal cover display with hover-to-change */}
-          <div className="book-cover-detail" onClick={() => fileRef.current?.click()}>
-            {coverUrl ? (
-              <img src={coverUrl} alt={bookTitle} />
-            ) : (
-              <>
-                <span className="cover-placeholder">{bookTitle}</span>
-                <span className="cover-no-image">No cover image</span>
-              </>
-            )}
-            <div className="cover-hover-overlay">
-              <span className="cover-hover-text">{coverUrl ? 'Change Cover' : 'Add Cover'}</span>
-            </div>
+        <div className="book-cover-detail" onClick={() => fileRef.current?.click()}>
+          {coverUrl ? (
+            <img src={coverUrl} alt={bookTitle} />
+          ) : (
+            <>
+              <span className="cover-placeholder">{bookTitle}</span>
+              <span className="cover-no-image">No cover image</span>
+            </>
+          )}
+          <div className="cover-hover-overlay">
+            <span className="cover-hover-text">{coverUrl ? 'Change Cover' : 'Add Cover'}</span>
           </div>
-        </>
+        </div>
       )}
     </div>
   )
