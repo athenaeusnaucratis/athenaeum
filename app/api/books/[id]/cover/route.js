@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase'
+import { uploadToCloudinary } from '@/lib/cloudinary'
 
 export async function POST(request, { params }) {
   const { id } = await params
@@ -7,22 +8,30 @@ export async function POST(request, { params }) {
 
   if (!file) return Response.json({ error: 'No file provided' }, { status: 400 })
 
-  const ext = file.name.split('.').pop() ?? 'jpg'
-  const path = `${id}.${ext}`
+  let publicUrl
 
-  // Upload to Supabase Storage (overwrite if exists)
-  const { error: uploadError } = await supabaseAdmin.storage
-    .from('covers')
-    .upload(path, file, { upsert: true, contentType: file.type })
+  try {
+    const result = await uploadToCloudinary(file, {
+      folder: `athenaeum/${id}`,
+      publicId: 'cover',
+    })
+    publicUrl = result.url
+  } catch (cloudErr) {
+    // Fallback to Supabase storage
+    console.warn('Cloudinary failed, falling back to Supabase:', cloudErr.message)
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    const path = `${id}.${ext}`
 
-  if (uploadError) return Response.json({ error: uploadError.message }, { status: 500 })
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('covers')
+      .upload(path, file, { upsert: true, contentType: file.type })
 
-  // Get public URL
-  const { data: { publicUrl } } = supabaseAdmin.storage
-    .from('covers')
-    .getPublicUrl(path)
+    if (uploadError) return Response.json({ error: uploadError.message }, { status: 500 })
 
-  // Update book record
+    const { data } = supabaseAdmin.storage.from('covers').getPublicUrl(path)
+    publicUrl = data.publicUrl
+  }
+
   const { error: updateError } = await supabaseAdmin
     .from('books')
     .update({ cover_image_url: publicUrl })

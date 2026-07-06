@@ -1,6 +1,8 @@
 import Nav from './Nav'
+import { getSession } from '@/lib/supabase-server'
 
-export default function PageShell({ active, children }) {
+export default async function PageShell({ active, children }) {
+  const user = await getSession()
   return (
     <>
       <style>{`
@@ -163,7 +165,7 @@ export default function PageShell({ active, children }) {
       `}</style>
 
       <div className="page">
-        <Nav active={active} />
+        <Nav active={active} user={user} />
         {children}
       </div>
     </>

@@ -1,7 +1,11 @@
 import AddBookFlow from './AddBookFlow'
 import PageShell from '@/app/components/PageShell'
+import { getSession } from '@/lib/supabase-server'
+import { redirect } from 'next/navigation'
 
-export default function AddBookPage() {
+export default async function AddBookPage() {
+  const user = await getSession()
+  if (!user) redirect('/login')
   return (
     <PageShell active="/add">
       <style>{`

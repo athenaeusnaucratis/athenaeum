@@ -1,10 +1,12 @@
 import { getCollectionStats, getRecentBooks } from '@/lib/books'
 import PageShell from '@/app/components/PageShell'
 import Link from 'next/link'
+import { getSession } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
 export default async function Home() {
+  const user = await getSession()
   const stats = await getCollectionStats()
   const { data: recentBooks } = await getRecentBooks(5)
 
@@ -427,10 +429,17 @@ export default async function Home() {
             <div className="stat-value">{stats.totalBooks ?? 0}</div>
             <div className="stat-label">Books in collection</div>
           </div>
-          <div className="stat-cell" data-index="02">
-            <div className="stat-value"><span className="accent">$</span>{Math.round(stats.totalValue ?? 0).toLocaleString()}</div>
-            <div className="stat-label">Estimated value</div>
-          </div>
+          {user ? (
+            <div className="stat-cell" data-index="02">
+              <div className="stat-value"><span className="accent">$</span>{Math.round(stats.totalValue ?? 0).toLocaleString()}</div>
+              <div className="stat-label">Estimated value</div>
+            </div>
+          ) : (
+            <div className="stat-cell" data-index="02">
+              <div className="stat-value">{stats.chefs ?? 0}</div>
+              <div className="stat-label">Chefs</div>
+            </div>
+          )}
           <div className="stat-cell" data-index="03">
             <div className="stat-value">{stats.languages ?? 0}</div>
             <div className="stat-label">Languages</div>
@@ -515,7 +524,11 @@ export default async function Home() {
       {/* FOOTER */}
       <footer className="home-footer">
         <span className="footer-brand">Athenaeum Deipnon</span>
-        <span className="footer-note">{stats.totalBooks ?? 0} volumes · est. value ${Math.round(stats.totalValue ?? 0).toLocaleString()} · since {stats.oldest ?? '—'}</span>
+        <span className="footer-note">
+          {stats.totalBooks ?? 0} volumes
+          {user && ` · est. value $${Math.round(stats.totalValue ?? 0).toLocaleString()}`}
+          {` · since ${stats.oldest ?? '—'}`}
+        </span>
       </footer>
     </PageShell>
   )

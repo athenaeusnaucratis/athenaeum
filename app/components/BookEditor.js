@@ -7,22 +7,42 @@ const FIELDS = [
   { key: 'title', label: 'Title', full: true, required: true },
   { key: 'subtitle', label: 'Subtitle', full: true },
   { key: 'publication_year', label: 'Year', type: 'number' },
-  { key: 'printing_number', label: 'Printing' },
+  { key: 'printing_number', label: 'Printing', select: ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', 'First Edition', 'Limited Edition', 'Reprint', 'Facsimile', 'Revised'] },
   { key: 'page_count', label: 'Pages', type: 'number' },
-  { key: 'format', label: 'Format' },
-  { key: 'language', label: 'Language' },
-  { key: 'country_of_origin', label: 'Country' },
+  { key: 'format', label: 'Format', select: ['', 'Hardcover', 'Paperback', 'Spiral-bound', 'Board Book', 'Ring-bound', 'Leather-bound', 'Loose Leaf', 'Mass Market', 'Trade Paperback'] },
+  { key: 'language', label: 'Language', select: ['', 'English', 'French', 'German', 'Spanish', 'Italian', 'Portuguese', 'Dutch', 'Russian', 'Chinese', 'Japanese', 'Korean', 'Arabic', 'Turkish', 'Persian', 'Hebrew', 'Greek', 'Latin', 'Swedish', 'Norwegian', 'Danish', 'Finnish', 'Polish', 'Czech', 'Hungarian', 'Romanian', 'Thai', 'Vietnamese', 'Indonesian', 'Hindi', 'Other'] },
+  { key: 'country_of_origin', label: 'Country', select: ['', 'United States', 'United Kingdom', 'France', 'Germany', 'Italy', 'Spain', 'Canada', 'Australia', 'India', 'Japan', 'China', 'South Korea', 'Brazil', 'Mexico', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Poland', 'Russia', 'Turkey', 'Iran', 'Israel', 'Greece', 'Portugal', 'Ireland', 'New Zealand', 'Singapore', 'Thailand', 'Other'] },
   { key: 'condition', label: 'Condition', select: ['', 'mint', 'very_good', 'good', 'fair', 'poor'] },
+  { key: 'location', label: 'Location', select: ['', 'SF', 'PH'] },
   { key: 'isbn_13', label: 'ISBN-13' },
   { key: 'isbn_10', label: 'ISBN-10' },
   { key: 'estimated_value_usd', label: 'Est. Value (USD)', type: 'number' },
+  { key: 'photographer', label: 'Photographer' },
+  { key: 'designer', label: 'Designer' },
+  { key: 'illustrator', label: 'Illustrator' },
   { key: 'cover_image_url', label: 'Cover Image URL', full: true },
-  { key: 'notes', label: 'Notes', full: true, textarea: true },
+  { key: 'description', label: 'Description', full: true, textarea: true },
 ]
 
-export default function BookEditor({ book, authors, publisher }) {
+export default function BookEditor({ book, authors, publisher, chefs, restaurants }) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
+
+  // authors prop is an array of {id, full_name}. Normalize to array of name strings.
+  const initialAuthors = Array.isArray(authors)
+    ? authors.map(a => (typeof a === 'string' ? a : a?.full_name)).filter(Boolean)
+    : (authors && typeof authors === 'string' && authors !== '—')
+      ? authors.split(',').map(s => s.trim()).filter(Boolean)
+      : []
+
+  const initialChefs = Array.isArray(chefs)
+    ? chefs.map(c => (typeof c === 'string' ? c : c?.full_name)).filter(Boolean)
+    : []
+
+  const initialRestaurants = Array.isArray(restaurants)
+    ? restaurants.map(r => (typeof r === 'string' ? r : r?.name)).filter(Boolean)
+    : []
+
   const [form, setForm] = useState({
     title: book.title ?? '',
     subtitle: book.subtitle ?? '',
@@ -33,18 +53,48 @@ export default function BookEditor({ book, authors, publisher }) {
     language: book.language ?? '',
     country_of_origin: book.country_of_origin ?? '',
     condition: book.condition ?? '',
+    location: book.location ?? '',
     isbn_13: book.isbn_13 ?? '',
     isbn_10: book.isbn_10 ?? '',
     estimated_value_usd: book.estimated_value_usd ?? '',
+    photographer: book.photographer ?? '',
+    designer: book.designer ?? '',
+    illustrator: book.illustrator ?? '',
     cover_image_url: book.cover_image_url ?? '',
-    notes: book.notes ?? '',
-    author: authors,
-    publisher: publisher,
+    description: book.description ?? '',
+    publisher: typeof publisher === 'string' && publisher !== '—' ? publisher : '',
   })
+  const [authorList, setAuthorList] = useState(initialAuthors.length ? initialAuthors : [''])
+  const [chefList, setChefList] = useState(initialChefs.length ? initialChefs : [''])
+  const [restaurantList, setRestaurantList] = useState(initialRestaurants.length ? initialRestaurants : [''])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [uploadingCover, setUploadingCover] = useState(false)
   const coverInputRef = useRef(null)
+
+  function updateAuthor(idx, value) {
+    setAuthorList(prev => prev.map((a, i) => i === idx ? value : a))
+  }
+  function addAuthor() { setAuthorList(prev => [...prev, '']) }
+  function removeAuthor(idx) {
+    setAuthorList(prev => prev.length === 1 ? [''] : prev.filter((_, i) => i !== idx))
+  }
+
+  function updateChef(idx, value) {
+    setChefList(prev => prev.map((a, i) => i === idx ? value : a))
+  }
+  function addChef() { setChefList(prev => [...prev, '']) }
+  function removeChef(idx) {
+    setChefList(prev => prev.length === 1 ? [''] : prev.filter((_, i) => i !== idx))
+  }
+
+  function updateRestaurant(idx, value) {
+    setRestaurantList(prev => prev.map((a, i) => i === idx ? value : a))
+  }
+  function addRestaurant() { setRestaurantList(prev => [...prev, '']) }
+  function removeRestaurant(idx) {
+    setRestaurantList(prev => prev.length === 1 ? [''] : prev.filter((_, i) => i !== idx))
+  }
 
   async function handleCoverUpload(e) {
     const file = e.target.files?.[0]
@@ -65,10 +115,21 @@ export default function BookEditor({ book, authors, publisher }) {
     if (!form.title.trim()) { setError('Title is required.'); return }
     setSaving(true)
     setError(null)
+
+    const cleanedAuthors = authorList.map(a => a.trim()).filter(Boolean)
+    const cleanedChefs = chefList.map(a => a.trim()).filter(Boolean)
+    const cleanedRestaurants = restaurantList.map(a => a.trim()).filter(Boolean)
+    const payload = {
+      ...form,
+      authors: cleanedAuthors,
+      chefs: cleanedChefs,
+      restaurants: cleanedRestaurants,
+    }
+
     const res = await fetch(`/api/books/${book.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify(payload),
     })
     const json = await res.json()
     setSaving(false)
@@ -77,9 +138,39 @@ export default function BookEditor({ book, authors, publisher }) {
     router.refresh()
   }
 
+  function startEdit() {
+    // Re-sync form state from the LATEST book prop before opening editor.
+    // Otherwise stale state can wipe fields updated by Auto Lookup / Refresh from APIs.
+    setForm({
+      title: book.title ?? '',
+      subtitle: book.subtitle ?? '',
+      publication_year: book.publication_year ?? '',
+      printing_number: book.printing_number ?? '',
+      page_count: book.page_count ?? '',
+      format: book.format ?? '',
+      language: book.language ?? '',
+      country_of_origin: book.country_of_origin ?? '',
+      condition: book.condition ?? '',
+      location: book.location ?? '',
+      isbn_13: book.isbn_13 ?? '',
+      isbn_10: book.isbn_10 ?? '',
+      estimated_value_usd: book.estimated_value_usd ?? '',
+      photographer: book.photographer ?? '',
+      designer: book.designer ?? '',
+      illustrator: book.illustrator ?? '',
+      cover_image_url: book.cover_image_url ?? '',
+      description: book.description ?? '',
+      publisher: typeof publisher === 'string' && publisher !== '—' ? publisher : '',
+    })
+    setAuthorList(initialAuthors.length ? initialAuthors : [''])
+    setChefList(initialChefs.length ? initialChefs : [''])
+    setRestaurantList(initialRestaurants.length ? initialRestaurants : [''])
+    setEditing(true)
+  }
+
   if (!editing) {
     return (
-      <button className="edit-btn" onClick={() => setEditing(true)}>
+      <button className="edit-btn" onClick={startEdit}>
         Edit
       </button>
     )
@@ -87,6 +178,26 @@ export default function BookEditor({ book, authors, publisher }) {
 
   return (
     <div className="editor-panel">
+      <style>{`
+        .author-row {
+          display: flex; gap: 0.5rem; align-items: center;
+          margin-bottom: 0.4rem;
+        }
+        .author-row input { flex: 1; }
+        .author-row-remove {
+          font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+          background: transparent; border: none; cursor: pointer; padding: 0.2rem 0.4rem;
+        }
+        .author-row-remove:hover { color: var(--coral); }
+        .author-add-btn {
+          font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.08em;
+          text-transform: uppercase; color: var(--muted);
+          background: transparent; border: 1px dashed var(--rule);
+          padding: 0.4rem 0.7rem; cursor: pointer; margin-top: 0.3rem;
+          transition: border-color 0.15s, color 0.15s;
+        }
+        .author-add-btn:hover { border-color: var(--coral); color: var(--coral); }
+      `}</style>
       {error && <p className="editor-error">{error}</p>}
       <div className="editor-grid">
         {FIELDS.map(f => (
@@ -116,13 +227,56 @@ export default function BookEditor({ book, authors, publisher }) {
             )}
           </div>
         ))}
-        <div className="editor-field">
-          <label>Author</label>
-          <input
-            type="text"
-            value={form.author}
-            onChange={e => setForm(p => ({ ...p, author: e.target.value }))}
-          />
+        <div className="editor-field full">
+          <label>Author{authorList.filter(Boolean).length > 1 ? 's' : ''}</label>
+          {authorList.map((a, i) => (
+            <div key={i} className="author-row">
+              <input
+                type="text"
+                value={a}
+                onChange={e => updateAuthor(i, e.target.value)}
+                placeholder={i === 0 ? 'Primary author' : `Co-author ${i + 1}`}
+              />
+              {(authorList.length > 1 || a) && (
+                <button type="button" className="author-row-remove" onClick={() => removeAuthor(i)} title="Remove">×</button>
+              )}
+            </div>
+          ))}
+          <button type="button" className="author-add-btn" onClick={addAuthor}>+ Add co-author</button>
+        </div>
+        <div className="editor-field full">
+          <label>Chef{chefList.filter(Boolean).length > 1 ? 's' : ''}</label>
+          {chefList.map((a, i) => (
+            <div key={i} className="author-row">
+              <input
+                type="text"
+                value={a}
+                onChange={e => updateChef(i, e.target.value)}
+                placeholder={i === 0 ? 'Chef name' : `Chef ${i + 1}`}
+              />
+              {(chefList.length > 1 || a) && (
+                <button type="button" className="author-row-remove" onClick={() => removeChef(i)} title="Remove">×</button>
+              )}
+            </div>
+          ))}
+          <button type="button" className="author-add-btn" onClick={addChef}>+ Add chef</button>
+        </div>
+        <div className="editor-field full">
+          <label>Restaurant{restaurantList.filter(Boolean).length > 1 ? 's' : ''}</label>
+          {restaurantList.map((a, i) => (
+            <div key={i} className="author-row">
+              <input
+                type="text"
+                value={a}
+                onChange={e => updateRestaurant(i, e.target.value)}
+                placeholder={i === 0 ? 'Restaurant name' : `Restaurant ${i + 1}`}
+              />
+              {(restaurantList.length > 1 || a) && (
+                <button type="button" className="author-row-remove" onClick={() => removeRestaurant(i)} title="Remove">×</button>
+              )}
+            </div>
+          ))}
+          <button type="button" className="author-add-btn" onClick={addRestaurant}>+ Add restaurant</button>
         </div>
         <div className="editor-field">
           <label>Publisher</label>

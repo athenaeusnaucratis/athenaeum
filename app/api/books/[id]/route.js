@@ -8,6 +8,57 @@ export async function DELETE(request, { params }) {
   return Response.json({ ok: true })
 }
 
+async function resolveAuthorId(name) {
+  const trimmed = name.trim()
+  if (!trimmed) return null
+  const { data: existing } = await supabaseAdmin
+    .from('authors')
+    .select('id')
+    .ilike('full_name', trimmed)
+    .maybeSingle()
+  if (existing) return existing.id
+  const { data: created } = await supabaseAdmin
+    .from('authors')
+    .insert({ full_name: trimmed, sort_name: trimmed })
+    .select('id')
+    .single()
+  return created?.id ?? null
+}
+
+async function resolveChefId(name) {
+  const trimmed = name.trim()
+  if (!trimmed) return null
+  const { data: existing } = await supabaseAdmin
+    .from('chefs')
+    .select('id')
+    .ilike('full_name', trimmed)
+    .maybeSingle()
+  if (existing) return existing.id
+  const { data: created } = await supabaseAdmin
+    .from('chefs')
+    .insert({ full_name: trimmed, sort_name: trimmed })
+    .select('id')
+    .single()
+  return created?.id ?? null
+}
+
+async function resolveRestaurantId(name) {
+  const trimmed = name.trim()
+  if (!trimmed) return null
+  const { data: existing } = await supabaseAdmin
+    .from('restaurants')
+    .select('id')
+    .ilike('name', trimmed)
+    .maybeSingle()
+  if (existing) return existing.id
+  const { data: created } = await supabaseAdmin
+    .from('restaurants')
+    .insert({ name: trimmed })
+    .select('id')
+    .single()
+  return created?.id ?? null
+}
+
 export async function PATCH(request, { params }) {
   const { id } = await params
   const fields = await request.json()
@@ -35,59 +86,88 @@ export async function PATCH(request, { params }) {
     }
   }
 
-  if (fields.author !== undefined) {
-    const { data: currentLinks } = await supabaseAdmin
-      .from('book_authors')
-      .select('author_id')
-      .eq('book_id', id)
-
-    if (fields.author) {
-      const { data: existing } = await supabaseAdmin
-        .from('authors')
-        .select('id')
-        .ilike('full_name', fields.author)
-        .maybeSingle()
-
-      let author_id
-      if (existing) {
-        author_id = existing.id
-      } else {
-        const { data: created } = await supabaseAdmin
-          .from('authors')
-          .insert({ full_name: fields.author, sort_name: fields.author })
-          .select('id')
-          .single()
-        author_id = created?.id
-      }
-
+  // Handle multi-author update (new: array of names)
+  if (Array.isArray(fields.authors)) {
+    const names = fields.authors.map(a => (a || '').trim()).filter(Boolean)
+    await supabaseAdmin.from('book_authors').delete().eq('book_id', id)
+    for (let i = 0; i < names.length; i++) {
+      const author_id = await resolveAuthorId(names[i])
       if (author_id) {
-        await supabaseAdmin.from('book_authors').delete().eq('book_id', id)
+        await supabaseAdmin.from('book_authors').insert({
+          book_id: id, author_id, author_order: i + 1,
+        })
+      }
+    }
+  } else if (fields.author !== undefined) {
+    // Legacy single-author path
+    await supabaseAdmin.from('book_authors').delete().eq('book_id', id)
+    if (fields.author) {
+      const author_id = await resolveAuthorId(fields.author)
+      if (author_id) {
         await supabaseAdmin.from('book_authors').insert({
           book_id: id, author_id, author_order: 1,
         })
       }
-    } else {
-      await supabaseAdmin.from('book_authors').delete().eq('book_id', id)
     }
   }
 
+  // Handle chefs (array of names)
+  if (Array.isArray(fields.chefs)) {
+    const names = fields.chefs.map(a => (a || '').trim()).filter(Boolean)
+    await supabaseAdmin.from('book_chefs').delete().eq('book_id', id)
+    for (let i = 0; i < names.length; i++) {
+      const chef_id = await resolveChefId(names[i])
+      if (chef_id) {
+        await supabaseAdmin.from('book_chefs').insert({
+          book_id: id, chef_id, chef_order: i + 1,
+        })
+      }
+    }
+  }
+
+  // Handle restaurants (array of names)
+  if (Array.isArray(fields.restaurants)) {
+    const names = fields.restaurants.map(a => (a || '').trim()).filter(Boolean)
+    await supabaseAdmin.from('book_restaurants').delete().eq('book_id', id)
+    for (let i = 0; i < names.length; i++) {
+      const restaurant_id = await resolveRestaurantId(names[i])
+      if (restaurant_id) {
+        await supabaseAdmin.from('book_restaurants').insert({
+          book_id: id, restaurant_id, restaurant_order: i + 1,
+        })
+      }
+    }
+  }
+
+  // Only update fields explicitly present in the payload. Fields set to '' are treated
+  // as a clear-to-null; missing fields (undefined) are left untouched. This prevents
+  // stale form state or partial callers from wiping unrelated values.
+  const asText = v => v !== undefined ? (v || null) : undefined
+  const asInt = v => v !== undefined ? (v ? parseInt(v) : null) : undefined
+  const asFloat = v => v !== undefined ? (v ? parseFloat(v) : null) : undefined
+
   const update = {
-    title: fields.title || undefined,
-    subtitle: fields.subtitle || null,
-    isbn_13: fields.isbn_13 || null,
-    isbn_10: fields.isbn_10 || null,
-    publication_year: fields.publication_year ? parseInt(fields.publication_year) : null,
-    edition: fields.edition || null,
-    printing_number: fields.printing_number || null,
-    page_count: fields.page_count ? parseInt(fields.page_count) : null,
-    format: fields.format || null,
-    language: fields.language || null,
-    country_of_origin: fields.country_of_origin || null,
-    condition: fields.condition || null,
-    dimensions: fields.dimensions || null,
-    estimated_value_usd: fields.estimated_value_usd ? parseFloat(fields.estimated_value_usd) : null,
-    cover_image_url: fields.cover_image_url || null,
-    notes: fields.notes || null,
+    title: fields.title || undefined, // never null title
+    subtitle: asText(fields.subtitle),
+    isbn_13: asText(fields.isbn_13),
+    isbn_10: asText(fields.isbn_10),
+    publication_year: asInt(fields.publication_year),
+    edition: asText(fields.edition),
+    printing_number: asText(fields.printing_number),
+    page_count: asInt(fields.page_count),
+    format: asText(fields.format),
+    language: asText(fields.language),
+    country_of_origin: asText(fields.country_of_origin),
+    condition: asText(fields.condition),
+    location: asText(fields.location),
+    photographer: asText(fields.photographer),
+    designer: asText(fields.designer),
+    illustrator: asText(fields.illustrator),
+    dimensions: asText(fields.dimensions),
+    estimated_value_usd: asFloat(fields.estimated_value_usd),
+    cover_image_url: asText(fields.cover_image_url),
+    description: asText(fields.description),
+    notes: asText(fields.notes),
   }
 
   if (publisher_id !== undefined) update.publisher_id = publisher_id

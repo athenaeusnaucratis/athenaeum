@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useCallback, useEffect } from 'react'
+import ScanTool from './ScanTool'
 
 const MAX_IMAGES = 4
 
@@ -218,11 +219,13 @@ function CropTool({ src, rotation, brightness, contrast, onCropChange }) {
   )
 }
 
-export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
+export default function CoverEditor({ bookId, initialUrl, bookTitle, canEdit = true }) {
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [scanSrc, setScanSrc] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [activeIndex, setActiveIndex] = useState(0)
 
@@ -235,6 +238,7 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
 
   const cameraRef = useRef(null)
   const uploadRef = useRef(null)
+  const scanCameraRef = useRef(null)
 
   useEffect(() => {
     fetch(`/api/books/${bookId}/images`)
@@ -266,6 +270,27 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
     resetEdits()
     setEditing(true)
     e.target.value = ''
+  }
+
+  function handleScanFileSelect(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setScanSrc(URL.createObjectURL(file))
+    setScanning(true)
+    e.target.value = ''
+  }
+
+  function handleScanComplete(correctedUrl) {
+    setScanning(false)
+    setScanSrc(null)
+    setPreviewUrl(correctedUrl)
+    resetEdits()
+    setEditing(true)
+  }
+
+  function handleScanCancel() {
+    setScanning(false)
+    setScanSrc(null)
   }
 
   function handleCropChange(box, dims) {
@@ -322,7 +347,7 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
     resetEdits()
   }
 
-  const canAdd = images.length < MAX_IMAGES
+  const canAdd = canEdit && images.length < MAX_IMAGES
 
   return (
     <div className="cover-editor">
@@ -334,12 +359,13 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
 
         .ce-main-image {
           position: relative; width: 100%; max-width: 280px;
-          aspect-ratio: 2/3; border: 1px solid var(--rule);
+          border: 1px solid var(--rule);
           display: flex; align-items: center; justify-content: center;
           overflow: hidden; background: var(--warm-mid);
         }
-        .ce-main-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .ce-main-image img { width: 100%; height: auto; object-fit: contain; display: block; }
 
+        .ce-main-image:not(:has(img)) { min-height: 200px; }
         .cover-placeholder {
           font-family: var(--serif); font-size: 1.1rem; font-style: italic;
           color: var(--muted); text-align: center; padding: 1rem; line-height: 1.3;
@@ -486,8 +512,15 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
 
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileSelect} />
       <input ref={uploadRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileSelect} />
+      <input ref={scanCameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleScanFileSelect} />
 
-      {editing && previewUrl ? (
+      {scanning && scanSrc ? (
+        <ScanTool
+          imageSrc={scanSrc}
+          onComplete={handleScanComplete}
+          onCancel={handleScanCancel}
+        />
+      ) : editing && previewUrl ? (
         <>
           <CropTool
             src={previewUrl}
@@ -544,7 +577,7 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
               {images.map((img, i) => (
                 <div key={img.id} className={`ce-thumb${i === activeIndex ? ' active' : ''}`} onClick={() => setActiveIndex(i)}>
                   <img src={img.image_url} alt="" />
-                  {img.id !== 'legacy' && (
+                  {canEdit && img.id !== 'legacy' && (
                     <button className="ce-thumb-delete" onClick={e => { e.stopPropagation(); handleDelete(img.id) }}>×</button>
                   )}
                 </div>
@@ -559,6 +592,7 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle }) {
             <div className="ce-add-buttons">
               <button className="ce-btn ce-btn-secondary" onClick={() => cameraRef.current?.click()}>Take Photo</button>
               <button className="ce-btn ce-btn-secondary" onClick={() => uploadRef.current?.click()}>Upload Photo</button>
+              <button className="ce-btn ce-btn-primary" onClick={() => scanCameraRef.current?.click()}>Scan Cover</button>
             </div>
           )}
 

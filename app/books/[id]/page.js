@@ -7,13 +7,16 @@ import BookEditor from '@/app/components/BookEditor'
 import ValuePanel from '@/app/components/ValuePanel'
 import CollectionPicker from '@/app/components/CollectionPicker'
 import CoverEditor from '@/app/components/CoverEditor'
+import EditableDescription from '@/app/components/EditableDescription'
 import DeleteBook from '@/app/components/DeleteBook'
 import MetadataRefresh from '@/app/components/MetadataRefresh'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { getSession } from '@/lib/supabase-server'
 
 export default async function BookPage({ params }) {
   const { id } = await params
+  const user = await getSession()
   const [{ data: book, error }, { data: bookTags }, { data: bookCollections }] = await Promise.all([
     getBookById(id),
     getBookTags(id),
@@ -22,9 +25,26 @@ export default async function BookPage({ params }) {
 
   if (error || !book) return notFound()
 
-  const authorList = book.authors?.map(a => a.authors).filter(Boolean) || []
+  const authorList = (book.authors || [])
+    .slice()
+    .sort((a, b) => (a.author_order ?? 999) - (b.author_order ?? 999))
+    .map(a => a.authors)
+    .filter(Boolean)
   const authors = authorList.map(a => a.full_name).join(', ') || '—'
+  const chefList = (book.chefs || [])
+    .slice()
+    .sort((a, b) => (a.chef_order ?? 999) - (b.chef_order ?? 999))
+    .map(c => c.chefs)
+    .filter(Boolean)
+  const restaurantList = (book.restaurants || [])
+    .slice()
+    .sort((a, b) => (a.restaurant_order ?? 999) - (b.restaurant_order ?? 999))
+    .map(r => r.restaurants)
+    .filter(Boolean)
   const publisher = book.publishers?.name || '—'
+
+  // Merge description + notes into one field
+  const combinedDescription = [book.description, book.notes].filter(Boolean).join('\n\n')
 
   // Get related books by same author
   let relatedBooks = []
@@ -240,7 +260,28 @@ export default async function BookPage({ params }) {
         .desc-block {
           padding: 2rem 4rem;
           border-bottom: 1px solid var(--rule);
+          transition: background 0.15s;
         }
+        .desc-block:hover { background: var(--warm-mid); }
+        .desc-block.desc-editing { background: var(--warm-mid); }
+        .desc-block.desc-editing:hover { background: var(--warm-mid); }
+
+        .desc-header {
+          display: flex; align-items: center; justify-content: space-between;
+          margin-bottom: 0.8rem;
+        }
+        .desc-label {
+          font-family: var(--mono); font-size: 0.58rem;
+          letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+        }
+        .desc-edit-btn {
+          font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.1em;
+          text-transform: uppercase; color: var(--muted); background: transparent;
+          border: none; cursor: pointer; padding: 0; opacity: 0;
+          transition: opacity 0.15s, color 0.15s;
+        }
+        .desc-block:hover .desc-edit-btn { opacity: 1; }
+        .desc-edit-btn:hover { color: var(--coral); }
 
         .desc-text {
           font-family: var(--serif);
@@ -249,6 +290,22 @@ export default async function BookPage({ params }) {
           font-style: italic;
           color: var(--muted);
           line-height: 1.8;
+          white-space: pre-line;
+        }
+        .desc-empty { opacity: 0.4; }
+
+        .desc-textarea {
+          font-family: var(--serif); font-size: 1rem; font-weight: 300;
+          color: var(--ink); background: transparent;
+          border: 1px solid var(--rule); padding: 0.8rem;
+          outline: none; width: 100%; resize: vertical;
+          line-height: 1.8; min-height: 100px;
+          transition: border-color 0.15s;
+        }
+        .desc-textarea:focus { border-color: var(--coral); }
+
+        .desc-actions {
+          display: flex; gap: 1rem; align-items: center; margin-top: 1rem;
         }
 
         /* ── META GRID ── */
@@ -507,21 +564,6 @@ export default async function BookPage({ params }) {
         }
         .cancel-btn:hover { color: var(--ink); }
 
-        /* ── NOTES ── */
-        .notes-section {
-          padding: 2.5rem 4rem;
-          border-top: 1px solid var(--rule);
-        }
-        .notes-label {
-          font-family: var(--mono); font-size: 0.6rem;
-          letter-spacing: 0.18em; text-transform: uppercase;
-          color: var(--muted); margin-bottom: 1rem;
-        }
-        .notes-body {
-          font-family: var(--serif); font-size: 1rem; font-weight: 300;
-          font-style: italic; color: var(--muted); line-height: 1.8;
-        }
-
         /* ── DELETE ── */
         .delete-wrap {
           margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--rule);
@@ -671,7 +713,7 @@ export default async function BookPage({ params }) {
         {/* LEFT: COVER */}
         <div className="cover-col">
           <div className="cover-wrap">
-            <CoverEditor bookId={id} initialUrl={book.cover_image_url} bookTitle={book.title} />
+            <CoverEditor bookId={id} initialUrl={book.cover_image_url} bookTitle={book.title} canEdit={!!user} />
 
             <div className="value-badge">
               <span className="value-label">Est. value</span>
@@ -694,19 +736,39 @@ export default async function BookPage({ params }) {
             {book.subtitle && <p className="book-subtitle-main">{book.subtitle}</p>}
             <div className="author-line">
               <span className="author-label">by</span>
-              {book.authors?.[0] ? (
-                <span className="author-name-link">{authors}</span>
+              {authorList.length > 0 ? (
+                authorList.map((a, i) => (
+                  <span key={a.id}>
+                    <Link href={`/authors/${a.id}`} className="author-name-link">{a.full_name}</Link>
+                    {i < authorList.length - 1 && <span style={{ color: 'var(--muted)', margin: '0 0.3rem' }}>,</span>}
+                  </span>
+                ))
               ) : (
                 <span style={{ color: 'var(--muted)', fontFamily: 'var(--serif)', fontSize: '1.1rem' }}>—</span>
               )}
             </div>
+            {chefList.length > 0 && (
+              <div className="author-line" style={{ marginTop: '0.6rem' }}>
+                <span className="author-label">chef{chefList.length > 1 ? 's' : ''}</span>
+                {chefList.map((c, i) => (
+                  <span key={c.id}>
+                    <Link href={`/chefs/${c.id}`} className="author-name-link">{c.full_name}</Link>
+                    {i < chefList.length - 1 && <span style={{ color: 'var(--muted)', margin: '0 0.3rem' }}>,</span>}
+                  </span>
+                ))}
+              </div>
+            )}
+            {restaurantList.length > 0 && (
+              <div className="author-line" style={{ marginTop: '0.6rem' }}>
+                <span className="author-label">restaurant{restaurantList.length > 1 ? 's' : ''}</span>
+                <span style={{ fontFamily: 'var(--serif)', fontSize: '1.1rem', color: 'var(--ink)' }}>
+                  {restaurantList.map(r => `${r.name}${r.city ? ` (${r.city})` : ''}`).join(', ')}
+                </span>
+              </div>
+            )}
           </div>
 
-          {book.description && (
-            <div className="desc-block">
-              <p className="desc-text">{book.description}</p>
-            </div>
-          )}
+          <EditableDescription bookId={id} initialText={combinedDescription} canEdit={!!user} />
 
           <div className="meta-grid">
             <div className="meta-cell">
@@ -719,7 +781,11 @@ export default async function BookPage({ params }) {
             </div>
             <div className="meta-cell">
               <div className="meta-key">Language</div>
-              <div className="meta-val">{book.language ?? '—'}</div>
+              <div className="meta-val">
+                {book.language ? (
+                  <Link href={`/language/${encodeURIComponent(book.language)}`} className="author-name-link">{book.language}</Link>
+                ) : '—'}
+              </div>
             </div>
             <div className="meta-cell">
               <div className="meta-key">ISBN</div>
@@ -741,23 +807,48 @@ export default async function BookPage({ params }) {
               <div className="meta-key">Country</div>
               <div className="meta-val">{book.country_of_origin ?? '—'}</div>
             </div>
+            {book.location && (
+              <div className="meta-cell">
+                <div className="meta-key">Location</div>
+                <div className="meta-val">
+                  <Link href={`/location/${encodeURIComponent(book.location)}`} className="author-name-link">{book.location}</Link>
+                </div>
+              </div>
+            )}
+            {book.photographer && (
+              <div className="meta-cell">
+                <div className="meta-key">Photography</div>
+                <div className="meta-val">{book.photographer}</div>
+              </div>
+            )}
+            {book.designer && (
+              <div className="meta-cell">
+                <div className="meta-key">Design</div>
+                <div className="meta-val">{book.designer}</div>
+              </div>
+            )}
+            {book.illustrator && (
+              <div className="meta-cell">
+                <div className="meta-key">Illustration</div>
+                <div className="meta-val">{book.illustrator}</div>
+              </div>
+            )}
+            <div className="meta-cell" style={{ display: 'none' }}>
+            </div>
           </div>
 
-          {book.notes && (
-            <div className="notes-section">
-              <div className="notes-label">Notes</div>
-              <p className="notes-body">{book.notes}</p>
-            </div>
-          )}
-
           <div className="sections-wrap">
-            <ReadStatusPicker bookId={id} initialStatus={book.read_status} />
-            <ValuePanel bookId={id} currentValue={book.estimated_value_usd} lastChecked={book.value_last_checked} />
-            <MetadataRefresh bookId={id} />
-            <CollectionPicker bookId={id} initialCollections={bookCollections} />
-            <TagPicker bookId={id} initialTags={bookTags} />
-            <BookEditor book={book} authors={authors} publisher={publisher} />
-            <DeleteBook bookId={id} />
+            <ValuePanel bookId={id} currentValue={book.estimated_value_usd} lastChecked={book.value_last_checked} bookTitle={book.title} isbn={book.isbn_13 || book.isbn_10} language={book.language} canEdit={!!user} />
+            {user && (
+              <>
+                <ReadStatusPicker bookId={id} initialStatus={book.read_status} />
+                <MetadataRefresh bookId={id} />
+                <CollectionPicker bookId={id} initialCollections={bookCollections} />
+                <TagPicker bookId={id} initialTags={bookTags} />
+                <BookEditor book={book} authors={authorList} chefs={chefList} restaurants={restaurantList} publisher={publisher} />
+                <DeleteBook bookId={id} />
+              </>
+            )}
           </div>
         </div>
       </div>

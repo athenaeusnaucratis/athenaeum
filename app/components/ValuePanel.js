@@ -3,14 +3,62 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function ValuePanel({ bookId, currentValue, lastChecked }) {
+const CURRENCIES = [
+  { code: 'USD', symbol: '$', rate: 1 },
+  { code: 'TRY', symbol: '₺', rate: 38 },
+  { code: 'EUR', symbol: '€', rate: 0.92 },
+  { code: 'GBP', symbol: '£', rate: 0.79 },
+  { code: 'JPY', symbol: '¥', rate: 155 },
+  { code: 'CNY', symbol: '¥', rate: 7.25 },
+  { code: 'INR', symbol: '₹', rate: 85 },
+  { code: 'KRW', symbol: '₩', rate: 1370 },
+  { code: 'CAD', symbol: 'C$', rate: 1.37 },
+  { code: 'AUD', symbol: 'A$', rate: 1.55 },
+  { code: 'BRL', symbol: 'R$', rate: 5.1 },
+]
+
+function buildSearchLinks(title, isbn) {
+  const q = encodeURIComponent(title || '')
+  const links = []
+
+  // Always show these
+  if (isbn) {
+    links.push({ name: 'eBay', url: `https://www.ebay.com/sch/i.html?_nkw=${isbn}&LH_Complete=1&LH_Sold=1` })
+    links.push({ name: 'AbeBooks', url: `https://www.abebooks.com/servlet/SearchResults?isbn=${isbn}&sortby=17` })
+    links.push({ name: 'Amazon', url: `https://www.amazon.com/s?k=${isbn}&i=stripbooks` })
+  } else {
+    links.push({ name: 'eBay', url: `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Complete=1&LH_Sold=1` })
+    links.push({ name: 'AbeBooks', url: `https://www.abebooks.com/servlet/SearchResults?kn=${q}&sortby=17` })
+    links.push({ name: 'Amazon', url: `https://www.amazon.com/s?k=${q}&i=stripbooks` })
+  }
+
+  // Turkish sources
+  links.push({ name: 'Nadirkitap', url: `https://www.nadirkitap.com/search.php?ara=${q}&tip=kitap` })
+  links.push({ name: 'Kitapyurdu', url: `https://www.kitapyurdu.com/index.php?route=product/search&filter_name=${q}` })
+  links.push({ name: 'Amazon TR', url: `https://www.amazon.com.tr/s?k=${q}&i=stripbooks` })
+
+  return links
+}
+
+export default function ValuePanel({ bookId, currentValue, lastChecked, bookTitle, isbn, language, canEdit = true }) {
   const router = useRouter()
   const [history, setHistory] = useState(null)
   const [showHistory, setShowHistory] = useState(false)
   const [looking, setLooking] = useState(false)
   const [manualValue, setManualValue] = useState('')
+  const [currency, setCurrency] = useState(
+    language === 'Turkish' ? 'TRY' :
+    language === 'Japanese' ? 'JPY' :
+    language === 'Korean' ? 'KRW' :
+    language === 'Chinese' ? 'CNY' :
+    language === 'Hindi' ? 'INR' :
+    'USD'
+  )
   const [showManual, setShowManual] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
   const [message, setMessage] = useState(null)
+
+  const searchLinks = buildSearchLinks(bookTitle, isbn)
 
   async function loadHistory() {
     const res = await fetch(`/api/books/${bookId}/value`)
@@ -42,23 +90,72 @@ export default function ValuePanel({ bookId, currentValue, lastChecked }) {
     }
   }
 
+  function getUsdValue() {
+    if (!manualValue) return 0
+    const cur = CURRENCIES.find(c => c.code === currency)
+    if (!cur) return parseFloat(manualValue)
+    return parseFloat(manualValue) / cur.rate
+  }
+
   async function handleManualSubmit(e) {
     e.preventDefault()
     if (!manualValue) return
+    const usd = getUsdValue()
+    const cur = CURRENCIES.find(c => c.code === currency)
+    const source = currency === 'USD' ? 'manual' : `manual (${cur.symbol}${manualValue} ${currency})`
     await fetch(`/api/books/${bookId}/value`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value: manualValue, source: 'manual' }),
+      body: JSON.stringify({ value: usd.toFixed(2), source }),
     })
     setManualValue('')
     setShowManual(false)
-    setMessage(`Value set to $${Number(manualValue).toFixed(2)}`)
+    setMessage(`Value set to $${usd.toFixed(2)}${currency !== 'USD' ? ` (${cur.symbol}${manualValue} ${currency})` : ''}`)
     router.refresh()
     if (showHistory) loadHistory()
   }
 
+  const usdPreview = manualValue && currency !== 'USD'
+    ? `≈ $${getUsdValue().toFixed(2)} USD`
+    : null
+
   return (
     <div className="value-panel">
+      <style>{`
+        .vp-search-links {
+          display: flex; flex-wrap: wrap; gap: 0.4rem;
+          margin-top: 0.75rem;
+        }
+        .vp-search-link {
+          font-family: var(--mono); font-size: 0.58rem; font-weight: 300;
+          letter-spacing: 0.06em; text-transform: uppercase;
+          color: var(--muted); background: transparent;
+          border: 1px solid var(--rule); padding: 0.25rem 0.6rem;
+          text-decoration: none; transition: all 0.15s;
+          cursor: pointer;
+        }
+        .vp-search-link:hover { border-color: var(--coral); color: var(--coral); }
+        .vp-search-label {
+          font-family: var(--mono); font-size: 0.55rem;
+          letter-spacing: 0.1em; text-transform: uppercase;
+          color: var(--muted); margin-top: 0.75rem; margin-bottom: 0.4rem;
+        }
+        .vp-currency-row {
+          display: flex; gap: 0.5rem; align-items: flex-end; margin-top: 0.75rem;
+        }
+        .vp-currency-select {
+          font-family: var(--mono); font-size: 0.75rem; color: var(--ink);
+          background: var(--parchment); border: none;
+          border-bottom: 1px solid var(--rule);
+          padding: 0.3rem 0.2rem; outline: none; width: 65px;
+        }
+        .vp-currency-select:focus { border-bottom-color: var(--coral); }
+        .vp-currency-preview {
+          font-family: var(--mono); font-size: 0.6rem;
+          color: var(--coral); margin-top: 0.3rem;
+        }
+      `}</style>
+
       <p className="vp-label">Market Value</p>
 
       <div className="vp-current">
@@ -72,12 +169,19 @@ export default function ValuePanel({ bookId, currentValue, lastChecked }) {
       </div>
 
       <div className="vp-actions">
-        <button className="vp-btn" onClick={handleLookup} disabled={looking}>
-          {looking ? 'Looking up…' : 'Refresh Value'}
-        </button>
-        <button className="vp-btn" onClick={() => setShowManual(p => !p)}>
-          Set Manually
-        </button>
+        {canEdit && (
+          <>
+            <button className="vp-btn" onClick={handleLookup} disabled={looking}>
+              {looking ? 'Looking up…' : 'Auto Lookup'}
+            </button>
+            <button className="vp-btn" onClick={() => setShowManual(p => !p)}>
+              Set Manually
+            </button>
+            <button className="vp-btn" onClick={() => setShowSearch(p => !p)}>
+              {showSearch ? 'Hide Links' : 'Search Prices'}
+            </button>
+          </>
+        )}
         <button className="vp-btn" onClick={loadHistory}>
           {showHistory ? 'Refresh History' : 'View History'}
         </button>
@@ -85,17 +189,47 @@ export default function ValuePanel({ bookId, currentValue, lastChecked }) {
 
       {message && <p className="vp-message">{message}</p>}
 
+      {showSearch && (
+        <div>
+          <p className="vp-search-label">Look up price on</p>
+          <div className="vp-search-links">
+            {searchLinks.map(l => (
+              <a key={l.name} href={l.url} target="_blank" rel="noopener noreferrer" className="vp-search-link">
+                {l.name} ↗
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {showManual && (
-        <form className="vp-manual" onSubmit={handleManualSubmit}>
+        <form className="vp-currency-row" onSubmit={handleManualSubmit}>
           <input
             type="number"
             step="0.01"
-            placeholder="USD value"
+            placeholder="Price"
             value={manualValue}
             onChange={e => setManualValue(e.target.value)}
+            style={{
+              fontFamily: 'var(--mono)', fontSize: '0.75rem', color: 'var(--ink)',
+              background: 'transparent', border: 'none', borderBottom: '1px solid var(--rule)',
+              padding: '0.3rem 0', outline: 'none', width: '80px',
+            }}
           />
-          <button type="submit">Set</button>
+          <select className="vp-currency-select" value={currency} onChange={e => setCurrency(e.target.value)}>
+            {CURRENCIES.map(c => (
+              <option key={c.code} value={c.code}>{c.code}</option>
+            ))}
+          </select>
+          <button type="submit" style={{
+            fontFamily: 'var(--mono)', fontSize: '0.6rem', letterSpacing: '0.08em',
+            textTransform: 'uppercase', color: 'var(--parchment)', background: 'var(--coral)',
+            border: 'none', padding: '0.4rem 0.8rem', cursor: 'pointer',
+          }}>Set</button>
         </form>
+      )}
+      {showManual && usdPreview && (
+        <div className="vp-currency-preview">{usdPreview}</div>
       )}
 
       {showHistory && history && (

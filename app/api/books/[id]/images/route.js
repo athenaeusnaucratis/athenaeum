@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase'
+import { uploadToCloudinary, deleteFromCloudinary } from '@/lib/cloudinary'
 
 const MAX_IMAGES = 4
 
@@ -31,30 +32,46 @@ export async function POST(request, { params }) {
     return Response.json({ error: `Maximum ${MAX_IMAGES} images allowed` }, { status: 400 })
   }
 
-  const ext = (file.name?.split('.').pop() ?? 'jpg').toLowerCase()
   const sortOrder = existing?.length ?? 0
-  const path = `${id}/${sortOrder}_${Date.now()}.${ext}`
-
-  // Upload to storage
-  const { error: uploadErr } = await supabaseAdmin.storage
-    .from('covers')
-    .upload(path, file, { upsert: true, contentType: file.type })
-
-  if (uploadErr) return Response.json({ error: uploadErr.message }, { status: 500 })
-
-  const { data: { publicUrl } } = supabaseAdmin.storage
-    .from('covers')
-    .getPublicUrl(path)
-
   const isCover = sortOrder === 0
+
+  let imageUrl, storagePath
+
+  try {
+    // Upload to Cloudinary
+    const result = await uploadToCloudinary(file, {
+      folder: `athenaeum/${id}`,
+      publicId: `${sortOrder}_${Date.now()}`,
+    })
+    imageUrl = result.url
+    storagePath = result.publicId // Store Cloudinary public_id for deletion
+  } catch (cloudErr) {
+    // Fallback to Supabase storage if Cloudinary not configured
+    console.warn('Cloudinary upload failed, falling back to Supabase:', cloudErr.message)
+    const ext = (file.name?.split('.').pop() ?? 'jpg').toLowerCase()
+    const path = `${id}/${sortOrder}_${Date.now()}.${ext}`
+
+    const { error: uploadErr } = await supabaseAdmin.storage
+      .from('covers')
+      .upload(path, file, { upsert: true, contentType: file.type })
+
+    if (uploadErr) return Response.json({ error: uploadErr.message }, { status: 500 })
+
+    const { data: { publicUrl } } = supabaseAdmin.storage
+      .from('covers')
+      .getPublicUrl(path)
+
+    imageUrl = publicUrl
+    storagePath = `supabase:${path}` // Prefix to distinguish storage backend
+  }
 
   // Insert image record
   const { data: img, error: insertErr } = await supabaseAdmin
     .from('book_images')
     .insert({
       book_id: id,
-      image_url: publicUrl,
-      storage_path: path,
+      image_url: imageUrl,
+      storage_path: storagePath,
       sort_order: sortOrder,
       is_cover: isCover,
     })
@@ -67,7 +84,7 @@ export async function POST(request, { params }) {
   if (isCover) {
     await supabaseAdmin
       .from('books')
-      .update({ cover_image_url: publicUrl })
+      .update({ cover_image_url: imageUrl })
       .eq('id', id)
   }
 
@@ -92,7 +109,14 @@ export async function DELETE(request, { params }) {
 
   // Delete from storage
   if (img.storage_path) {
-    await supabaseAdmin.storage.from('covers').remove([img.storage_path])
+    if (img.storage_path.startsWith('supabase:')) {
+      // Legacy Supabase storage
+      const path = img.storage_path.replace('supabase:', '')
+      await supabaseAdmin.storage.from('covers').remove([path])
+    } else {
+      // Cloudinary
+      await deleteFromCloudinary(img.storage_path)
+    }
   }
 
   // Delete record

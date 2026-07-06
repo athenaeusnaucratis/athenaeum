@@ -401,11 +401,11 @@ export default async function GenrePage() {
           </div>
           <div className="lang-cells">
             {languages.map(([lang, count]) => (
-              <div key={lang} className="lang-cell">
+              <Link key={lang} href={`/language/${encodeURIComponent(lang)}`} className="lang-cell" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="lang-name">{lang}</div>
                 <div className="lang-count">{count} book{count !== 1 ? 's' : ''}</div>
                 <div className="lang-dot"></div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

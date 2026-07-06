@@ -1,13 +1,19 @@
 import { getAuthorById, getBooksByAuthor } from '@/lib/books'
 import PageShell from '@/app/components/PageShell'
 import MetadataRefresh from '@/app/components/MetadataRefresh'
+import DeleteAuthorButton from '@/app/components/DeleteAuthorButton'
+import AuthorEditor from '@/app/components/AuthorEditor'
+import EditableBio from '@/app/components/EditableBio'
+import AuthorPromoteButtons from '@/app/components/AuthorPromoteButtons'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { getSession } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AuthorDetailPage({ params }) {
   const { id } = await params
+  const user = await getSession()
   const { data: author } = await getAuthorById(id)
 
   if (!author) return notFound()
@@ -224,6 +230,67 @@ export default async function AuthorDetailPage({ params }) {
         .vp-btn:hover { border-color: var(--ink); color: var(--ink); }
         .vp-btn:disabled { opacity: 0.3; cursor: default; }
 
+        .delete-btn { color: var(--coral); border-color: var(--coral); }
+        .delete-btn:hover { background: var(--coral); color: var(--parchment); }
+        .delete-confirm { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+        .delete-msg { font-family: var(--mono); font-size: 0.65rem; color: var(--coral); }
+        .delete-yes { color: var(--coral); border-color: var(--coral); }
+        .delete-yes:hover { background: var(--coral); color: var(--parchment); }
+
+        .author-actions-row {
+          display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap;
+        }
+        .author-actions-row > * { flex: 1; min-width: 200px; }
+
+        /* ── EDITOR ── */
+        .author-editor-panel { margin-top: 1rem; }
+        .edit-btn {
+          font-family: var(--mono); font-size: 0.6rem; font-weight: 300;
+          letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+          background: transparent; border: 1px solid var(--rule); padding: 0.3rem 0.7rem;
+          cursor: pointer; transition: all 0.15s ease;
+        }
+        .edit-btn:hover { border-color: var(--ink); color: var(--ink); }
+        .editor-error {
+          font-family: var(--mono); font-size: 0.7rem; color: var(--coral); margin-bottom: 1rem;
+        }
+        .editor-grid {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem 2rem;
+        }
+        .editor-field { display: flex; flex-direction: column; gap: 0.3rem; }
+        .editor-field.full { grid-column: 1 / -1; }
+        .editor-field label {
+          font-family: var(--mono); font-size: 0.55rem; font-weight: 400;
+          letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+        }
+        .editor-field input, .editor-field textarea {
+          font-family: var(--serif); font-size: 1rem; color: var(--ink);
+          background: transparent; border: none; border-bottom: 1px solid var(--rule);
+          padding: 0.3rem 0; outline: none; width: 100%;
+          transition: border-color 0.15s ease;
+        }
+        .editor-field textarea {
+          border: 1px solid var(--rule); padding: 0.5rem; resize: vertical;
+          font-size: 0.95rem; line-height: 1.5;
+        }
+        .editor-field input:focus, .editor-field textarea:focus {
+          border-color: var(--coral);
+        }
+        .editor-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
+        .save-btn {
+          font-family: var(--mono); font-size: 0.65rem; font-weight: 400;
+          letter-spacing: 0.08em; text-transform: uppercase; color: var(--parchment);
+          background: var(--coral); border: none; padding: 0.6rem 1.2rem; cursor: pointer;
+          transition: background 0.15s ease;
+        }
+        .save-btn:hover { background: #c05530; }
+        .save-btn:disabled { opacity: 0.4; cursor: default; }
+        .cancel-btn {
+          font-family: var(--mono); font-size: 0.65rem; font-weight: 300;
+          color: var(--muted); background: transparent; border: none; cursor: pointer; padding: 0;
+        }
+        .cancel-btn:hover { color: var(--ink); }
+
         .empty-state {
           font-family: var(--serif);
           font-size: 1rem;
@@ -272,11 +339,7 @@ export default async function AuthorDetailPage({ params }) {
       </div>
 
       {/* BIO */}
-      {author.bio && (
-        <div className="author-bio-section">
-          <p className="bio-text">{author.bio}</p>
-        </div>
-      )}
+      <EditableBio authorId={id} initialText={author.bio} canEdit={!!user} />
 
       {/* BOOKS */}
       {books?.length > 0 ? (
@@ -302,10 +365,22 @@ export default async function AuthorDetailPage({ params }) {
         <p className="empty-state">No books by this author yet.</p>
       )}
 
-      {/* METADATA REFRESH */}
-      <div className="author-actions">
-        <MetadataRefresh authorId={id} />
-      </div>
+      {/* ACTIONS */}
+      {user && (
+        <div className="author-actions">
+          <div className="author-actions-row">
+            <MetadataRefresh authorId={id} />
+            <AuthorPromoteButtons authorId={id} />
+            <div className="meta-refresh">
+              <p className="mr-label">Manage</p>
+              <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
+                <AuthorEditor author={author} />
+                <DeleteAuthorButton authorId={id} authorName={author.full_name} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </PageShell>
   )
 }

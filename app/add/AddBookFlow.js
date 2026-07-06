@@ -129,23 +129,32 @@ export default function AddBookFlow() {
         // OCR failed — go to form anyway, user can fill manually
         setOcrWarning(data.error || 'OCR could not read the cover. Fill in details manually.')
       } else {
-        // Apply extracted fields (only overwrite empty fields or all if form is empty)
-        setForm(prev => ({
-          ...prev,
-          title: data.title || prev.title,
-          subtitle: data.subtitle || prev.subtitle,
-          author: data.author || prev.author,
-          publisher: data.publisher || prev.publisher,
-        }))
-        if (data._warning) {
-          setOcrWarning(data._warning)
-        }
+        applyOcrData(data)
+        const sourceNote = data._enriched_via ? ` (enriched via ${data._enriched_via.replace('_', ' ')})` : ''
+        if (data._warning) setOcrWarning(data._warning + sourceNote)
       }
     } catch (e) {
       setOcrWarning('OCR request failed. Fill in details manually.')
     }
 
     setStage('confirm')
+  }
+
+  // Merge OCR result into form — only fill empty fields, never overwrite what user typed
+  function applyOcrData(data) {
+    setForm(prev => ({
+      ...prev,
+      title: prev.title || data.title || '',
+      subtitle: prev.subtitle || data.subtitle || '',
+      author: prev.author || data.author || '',
+      publisher: prev.publisher || data.publisher || '',
+      publication_year: prev.publication_year || (data.publication_year ? String(data.publication_year) : ''),
+      page_count: prev.page_count || (data.page_count ? String(data.page_count) : ''),
+      language: prev.language || data.language || '',
+      isbn_13: prev.isbn_13 || data.isbn_13 || '',
+      isbn_10: prev.isbn_10 || data.isbn_10 || '',
+      cover_image_url: prev.cover_image_url || data.cover_image_url || '',
+    }))
   }
 
   // Manual OCR retry from the confirm form
@@ -163,13 +172,7 @@ export default function AddBookFlow() {
       if (!res.ok) {
         setOcrWarning(data.error || 'OCR failed again.')
       } else {
-        setForm(prev => ({
-          ...prev,
-          title: data.title || prev.title,
-          subtitle: data.subtitle || prev.subtitle,
-          author: data.author || prev.author,
-          publisher: data.publisher || prev.publisher,
-        }))
+        applyOcrData(data)
         if (data._warning) setOcrWarning(data._warning)
       }
     } catch {

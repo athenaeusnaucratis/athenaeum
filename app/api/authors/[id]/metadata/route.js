@@ -110,6 +110,52 @@ async function lookupAuthorMetadata(name) {
     } catch (e) { console.error('Google Books author error:', e.message) }
   }
 
+  // 4. Claude AI — generate bio, fill nationality, birth year
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY
+  const missingAuthorFields = []
+  if (!result.bio) missingAuthorFields.push('bio')
+  if (!result.birth_year) missingAuthorFields.push('birth_year')
+  if (!result.nationality) missingAuthorFields.push('nationality')
+
+  if (ANTHROPIC_KEY && missingAuthorFields.length > 0) {
+    try {
+      const Anthropic = (await import('@anthropic-ai/sdk')).default
+      const client = new Anthropic({ apiKey: ANTHROPIC_KEY })
+
+      const aiRes = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 500,
+        messages: [{
+          role: 'user',
+          content: `You are a book reference librarian. I need information about the cookbook author "${name}".
+
+Provide the following fields: ${missingAuthorFields.join(', ')}
+
+For "bio": write a 3-4 sentence biography focused on their culinary career, notable cookbooks, cooking style, and achievements. Be factual — if you don't recognize this author, say so honestly.
+For "nationality": use the country name (e.g. "American", "British", "French").
+For "birth_year": the year they were born as an integer.
+
+Return ONLY a JSON object. Use null for anything you cannot determine with confidence.
+{"bio": "...", "birth_year": 1950, "nationality": "American"}
+
+Return ONLY the JSON, no explanation.`
+        }],
+      })
+
+      const aiText = aiRes.content[0]?.text || ''
+      const jsonMatch = aiText.match(/\{[\s\S]*?\}/)
+      if (jsonMatch) {
+        const ai = JSON.parse(jsonMatch[0])
+        if (!result.bio && ai.bio && ai.bio !== 'null' && !/do not recognize|don't recognize|not familiar|cannot determine|cannot provide|not able to|unable to verify|cannot verify|not recognize/i.test(ai.bio)) {
+          result.bio = ai.bio
+        }
+        if (!result.birth_year && ai.birth_year) result.birth_year = parseInt(ai.birth_year)
+        if (!result.nationality && ai.nationality && ai.nationality !== 'null') result.nationality = ai.nationality
+        sources.push('claude')
+      }
+    } catch (e) { console.error('Claude author enrichment error:', e.message) }
+  }
+
   result.source = sources.join('+') || null
   const dataKeys = Object.keys(result).filter(k => k !== 'source' && result[k] != null)
   return dataKeys.length > 0 ? result : null
@@ -120,7 +166,7 @@ export async function POST(request, { params }) {
 
   const { data: author } = await supabase
     .from('authors')
-    .select('id, full_name, bio, birth_year, photo_url')
+    .select('id, full_name, bio, birth_year, photo_url, nationality')
     .eq('id', id)
     .single()
 
@@ -138,6 +184,7 @@ export async function POST(request, { params }) {
   if (!author.bio && found.bio) { update.bio = found.bio; filled.push('bio') }
   if (!author.birth_year && found.birth_year) { update.birth_year = found.birth_year; filled.push('birth_year') }
   if (!author.photo_url && found.photo_url) { update.photo_url = found.photo_url; filled.push('photo') }
+  if (!author.nationality && found.nationality) { update.nationality = found.nationality; filled.push('nationality') }
 
   if (Object.keys(update).length > 0) {
     const { error } = await supabaseAdmin.from('authors').update(update).eq('id', id)
