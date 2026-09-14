@@ -11,14 +11,23 @@ const FIELDS = [
   { key: 'page_count', label: 'Pages', type: 'number' },
   { key: 'format', label: 'Format', select: ['', 'Hardcover', 'Paperback', 'Spiral-bound', 'Board Book', 'Ring-bound', 'Leather-bound', 'Loose Leaf', 'Mass Market', 'Trade Paperback'] },
   { key: 'language', label: 'Language', select: ['', 'English', 'French', 'German', 'Spanish', 'Italian', 'Portuguese', 'Dutch', 'Russian', 'Chinese', 'Japanese', 'Korean', 'Arabic', 'Turkish', 'Persian', 'Hebrew', 'Greek', 'Latin', 'Swedish', 'Norwegian', 'Danish', 'Finnish', 'Polish', 'Czech', 'Hungarian', 'Romanian', 'Thai', 'Vietnamese', 'Indonesian', 'Hindi', 'Other'] },
+  { key: 'original_language', label: 'Original Language', select: ['', 'English', 'French', 'German', 'Spanish', 'Italian', 'Portuguese', 'Dutch', 'Russian', 'Chinese', 'Japanese', 'Korean', 'Arabic', 'Turkish', 'Persian', 'Hebrew', 'Greek', 'Latin', 'Swedish', 'Norwegian', 'Danish', 'Finnish', 'Polish', 'Czech', 'Hungarian', 'Romanian', 'Thai', 'Vietnamese', 'Indonesian', 'Hindi', 'Other'] },
   { key: 'country_of_origin', label: 'Country', select: ['', 'United States', 'United Kingdom', 'France', 'Germany', 'Italy', 'Spain', 'Canada', 'Australia', 'India', 'Japan', 'China', 'South Korea', 'Brazil', 'Mexico', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Poland', 'Russia', 'Turkey', 'Iran', 'Israel', 'Greece', 'Portugal', 'Ireland', 'New Zealand', 'Singapore', 'Thailand', 'Other'] },
   { key: 'condition', label: 'Condition', select: ['', 'mint', 'very_good', 'good', 'fair', 'poor'] },
   { key: 'location', label: 'Location', select: ['', 'SF', 'PH'] },
   { key: 'isbn_13', label: 'ISBN-13' },
   { key: 'isbn_10', label: 'ISBN-10' },
-  { key: 'estimated_value_usd', label: 'Est. Value (USD)', type: 'number' },
+  // estimated_value_usd intentionally omitted here — value is managed by the Market Value
+  // panel (with history, currency-aware manual entry, and auto lookup). Including it in
+  // this raw editor caused stale form state to wipe a freshly-fetched value on Save.
+  { key: 'editor', label: 'Editor' },
+  { key: 'text_by', label: 'Text' },
   { key: 'photographer', label: 'Photographer' },
+  { key: 'cover_photographer', label: 'Cover Photo' },
+  { key: 'food_stylist', label: 'Food Stylist' },
   { key: 'designer', label: 'Designer' },
+  { key: 'cover_designer', label: 'Cover Design' },
+  { key: 'art_director', label: 'Art Director' },
   { key: 'illustrator', label: 'Illustrator' },
   { key: 'cover_image_url', label: 'Cover Image URL', full: true },
   { key: 'description', label: 'Description', full: true, textarea: true },
@@ -39,9 +48,9 @@ export default function BookEditor({ book, authors, publisher, chefs, restaurant
     ? chefs.map(c => (typeof c === 'string' ? c : c?.full_name)).filter(Boolean)
     : []
 
-  const initialRestaurants = Array.isArray(restaurants)
-    ? restaurants.map(r => (typeof r === 'string' ? r : r?.name)).filter(Boolean)
-    : []
+  // Seed the multi-entry Translator input from book.translators (comma-separated text)
+  const initialTranslators = (book.translators || '')
+    .split(',').map(s => s.trim()).filter(Boolean)
 
   const [form, setForm] = useState({
     title: book.title ?? '',
@@ -51,14 +60,20 @@ export default function BookEditor({ book, authors, publisher, chefs, restaurant
     page_count: book.page_count ?? '',
     format: book.format ?? '',
     language: book.language ?? '',
+    original_language: book.original_language ?? '',
     country_of_origin: book.country_of_origin ?? '',
     condition: book.condition ?? '',
     location: book.location ?? '',
     isbn_13: book.isbn_13 ?? '',
     isbn_10: book.isbn_10 ?? '',
-    estimated_value_usd: book.estimated_value_usd ?? '',
+    editor: book.editor ?? '',
+    text_by: book.text_by ?? '',
     photographer: book.photographer ?? '',
+    cover_photographer: book.cover_photographer ?? '',
+    food_stylist: book.food_stylist ?? '',
     designer: book.designer ?? '',
+    cover_designer: book.cover_designer ?? '',
+    art_director: book.art_director ?? '',
     illustrator: book.illustrator ?? '',
     cover_image_url: book.cover_image_url ?? '',
     description: book.description ?? '',
@@ -66,7 +81,7 @@ export default function BookEditor({ book, authors, publisher, chefs, restaurant
   })
   const [authorList, setAuthorList] = useState(initialAuthors.length ? initialAuthors : [''])
   const [chefList, setChefList] = useState(initialChefs.length ? initialChefs : [''])
-  const [restaurantList, setRestaurantList] = useState(initialRestaurants.length ? initialRestaurants : [''])
+  const [translatorList, setTranslatorList] = useState(initialTranslators.length ? initialTranslators : [''])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [uploadingCover, setUploadingCover] = useState(false)
@@ -88,12 +103,12 @@ export default function BookEditor({ book, authors, publisher, chefs, restaurant
     setChefList(prev => prev.length === 1 ? [''] : prev.filter((_, i) => i !== idx))
   }
 
-  function updateRestaurant(idx, value) {
-    setRestaurantList(prev => prev.map((a, i) => i === idx ? value : a))
+  function updateTranslator(idx, value) {
+    setTranslatorList(prev => prev.map((a, i) => i === idx ? value : a))
   }
-  function addRestaurant() { setRestaurantList(prev => [...prev, '']) }
-  function removeRestaurant(idx) {
-    setRestaurantList(prev => prev.length === 1 ? [''] : prev.filter((_, i) => i !== idx))
+  function addTranslator() { setTranslatorList(prev => [...prev, '']) }
+  function removeTranslator(idx) {
+    setTranslatorList(prev => prev.length === 1 ? [''] : prev.filter((_, i) => i !== idx))
   }
 
   async function handleCoverUpload(e) {
@@ -118,12 +133,12 @@ export default function BookEditor({ book, authors, publisher, chefs, restaurant
 
     const cleanedAuthors = authorList.map(a => a.trim()).filter(Boolean)
     const cleanedChefs = chefList.map(a => a.trim()).filter(Boolean)
-    const cleanedRestaurants = restaurantList.map(a => a.trim()).filter(Boolean)
+    const cleanedTranslators = translatorList.map(a => a.trim()).filter(Boolean)
     const payload = {
       ...form,
       authors: cleanedAuthors,
       chefs: cleanedChefs,
-      restaurants: cleanedRestaurants,
+      translators: cleanedTranslators.join(', '),
     }
 
     const res = await fetch(`/api/books/${book.id}`, {
@@ -149,14 +164,20 @@ export default function BookEditor({ book, authors, publisher, chefs, restaurant
       page_count: book.page_count ?? '',
       format: book.format ?? '',
       language: book.language ?? '',
+      original_language: book.original_language ?? '',
       country_of_origin: book.country_of_origin ?? '',
       condition: book.condition ?? '',
       location: book.location ?? '',
       isbn_13: book.isbn_13 ?? '',
       isbn_10: book.isbn_10 ?? '',
-      estimated_value_usd: book.estimated_value_usd ?? '',
+      editor: book.editor ?? '',
+      text_by: book.text_by ?? '',
       photographer: book.photographer ?? '',
+      cover_photographer: book.cover_photographer ?? '',
+      food_stylist: book.food_stylist ?? '',
       designer: book.designer ?? '',
+      cover_designer: book.cover_designer ?? '',
+      art_director: book.art_director ?? '',
       illustrator: book.illustrator ?? '',
       cover_image_url: book.cover_image_url ?? '',
       description: book.description ?? '',
@@ -164,7 +185,7 @@ export default function BookEditor({ book, authors, publisher, chefs, restaurant
     })
     setAuthorList(initialAuthors.length ? initialAuthors : [''])
     setChefList(initialChefs.length ? initialChefs : [''])
-    setRestaurantList(initialRestaurants.length ? initialRestaurants : [''])
+    setTranslatorList(initialTranslators.length ? initialTranslators : [''])
     setEditing(true)
   }
 
@@ -262,21 +283,21 @@ export default function BookEditor({ book, authors, publisher, chefs, restaurant
           <button type="button" className="author-add-btn" onClick={addChef}>+ Add chef</button>
         </div>
         <div className="editor-field full">
-          <label>Restaurant{restaurantList.filter(Boolean).length > 1 ? 's' : ''}</label>
-          {restaurantList.map((a, i) => (
+          <label>Translator{translatorList.filter(Boolean).length > 1 ? 's' : ''}</label>
+          {translatorList.map((a, i) => (
             <div key={i} className="author-row">
               <input
                 type="text"
                 value={a}
-                onChange={e => updateRestaurant(i, e.target.value)}
-                placeholder={i === 0 ? 'Restaurant name' : `Restaurant ${i + 1}`}
+                onChange={e => updateTranslator(i, e.target.value)}
+                placeholder={i === 0 ? 'Translator name' : `Translator ${i + 1}`}
               />
-              {(restaurantList.length > 1 || a) && (
-                <button type="button" className="author-row-remove" onClick={() => removeRestaurant(i)} title="Remove">×</button>
+              {(translatorList.length > 1 || a) && (
+                <button type="button" className="author-row-remove" onClick={() => removeTranslator(i)} title="Remove">×</button>
               )}
             </div>
           ))}
-          <button type="button" className="author-add-btn" onClick={addRestaurant}>+ Add restaurant</button>
+          <button type="button" className="author-add-btn" onClick={addTranslator}>+ Add translator</button>
         </div>
         <div className="editor-field">
           <label>Publisher</label>

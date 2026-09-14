@@ -7,8 +7,8 @@ const PAGE_SIZE = 50
 
 export default function BookList({ books }) {
   const [query, setQuery] = useState('')
-  const [sortKey, setSortKey] = useState('title')
-  const [sortDir, setSortDir] = useState('asc')
+  const [sortKey, setSortKey] = useState('recent')
+  const [sortDir, setSortDir] = useState('desc')
   const [filterLang, setFilterLang] = useState('')
   const [filterCondition, setFilterCondition] = useState('')
   const [filterFormat, setFilterFormat] = useState('')
@@ -63,6 +63,8 @@ export default function BookList({ books }) {
           va = a.publication_year ?? 0; vb = b.publication_year ?? 0; break
         case 'value':
           va = Number(a.estimated_value_usd) || 0; vb = Number(b.estimated_value_usd) || 0; break
+        case 'recent':
+          va = a.created_at ?? ''; vb = b.created_at ?? ''; break
         default: va = ''; vb = ''
       }
       if (va < vb) return sortDir === 'asc' ? -1 : 1

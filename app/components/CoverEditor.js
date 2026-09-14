@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react'
 import ScanTool from './ScanTool'
+import LiveScanTool from './LiveScanTool'
 
 const MAX_IMAGES = 4
 
@@ -226,6 +227,8 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle, canEdit = t
   const [editing, setEditing] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [scanSrc, setScanSrc] = useState(null)
+  const [liveScanning, setLiveScanning] = useState(false)
+  const [editingExistingId, setEditingExistingId] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [activeIndex, setActiveIndex] = useState(0)
 
@@ -263,13 +266,40 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle, canEdit = t
     setContrast(100)
   }
 
-  function handleFileSelect(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setPreviewUrl(URL.createObjectURL(file))
-    resetEdits()
-    setEditing(true)
+  async function handleFileSelect(e) {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
     e.target.value = ''
+
+    // Single file → open the crop editor for a full edit pass
+    if (files.length === 1) {
+      setPreviewUrl(URL.createObjectURL(files[0]))
+      resetEdits()
+      setEditingExistingId(null)
+      setEditing(true)
+      return
+    }
+
+    // Multiple files → upload each as-is, respecting MAX_IMAGES.
+    setUploading(true)
+    const remaining = Math.max(0, MAX_IMAGES - images.length)
+    const toUpload = files.slice(0, remaining)
+    const skipped = files.length - toUpload.length
+    for (const file of toUpload) {
+      try {
+        const fd = new FormData()
+        fd.append('file', file)
+        const res = await fetch(`/api/books/${bookId}/images`, { method: 'POST', body: fd })
+        if (res.ok) {
+          const img = await res.json()
+          setImages(prev => [...prev, img])
+        }
+      } catch { /* skip failed, continue rest */ }
+    }
+    setUploading(false)
+    if (skipped > 0) {
+      alert(`Only ${toUpload.length} photo${toUpload.length !== 1 ? 's' : ''} added — ${MAX_IMAGES} is the max per book.`)
+    }
   }
 
   function handleScanFileSelect(e) {
@@ -293,6 +323,17 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle, canEdit = t
     setScanSrc(null)
   }
 
+  function handleLiveScanComplete(correctedUrl) {
+    setLiveScanning(false)
+    setPreviewUrl(correctedUrl)
+    resetEdits()
+    setEditing(true)
+  }
+
+  function handleLiveScanCancel() {
+    setLiveScanning(false)
+  }
+
   function handleCropChange(box, dims) {
     setCropData(box)
     setImgDims(dims)
@@ -309,7 +350,20 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle, canEdit = t
         const res = await fetch(`/api/books/${bookId}/images`, { method: 'POST', body: fd })
         if (res.ok) {
           const img = await res.json()
-          setImages(prev => [...prev, img])
+          if (editingExistingId) {
+            // Replace: delete the old row after the new one is up
+            try {
+              await fetch(`/api/books/${bookId}/images`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_id: editingExistingId }),
+              })
+            } catch {}
+            setImages(prev => [...prev.filter(i => i.id !== editingExistingId), img])
+            setEditingExistingId(null)
+          } else {
+            setImages(prev => [...prev, img])
+          }
           setPreviewUrl(null)
           setEditing(false)
         } else {
@@ -319,6 +373,13 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle, canEdit = t
       }
     } catch {}
     setUploading(false)
+  }
+
+  function handleEditExisting(image) {
+    setPreviewUrl(image.image_url)
+    setEditingExistingId(image.id)
+    resetEdits()
+    setEditing(true)
   }
 
   async function handleDelete(imageId) {
@@ -337,6 +398,7 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle, canEdit = t
   function handleRetake() {
     setPreviewUrl(null)
     setEditing(false)
+    setEditingExistingId(null)
     resetEdits()
     setTimeout(() => cameraRef.current?.click(), 100)
   }
@@ -344,6 +406,7 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle, canEdit = t
   function handleCancel() {
     setPreviewUrl(null)
     setEditing(false)
+    setEditingExistingId(null)
     resetEdits()
   }
 
@@ -442,7 +505,19 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle, canEdit = t
           cursor: pointer; opacity: 0; transition: opacity 0.15s;
           border: none; padding: 0;
         }
-        .ce-thumb:hover .ce-thumb-delete { opacity: 1; }
+        .ce-thumb-edit {
+          position: absolute; top: 1px; left: 1px;
+          width: 14px; height: 14px; background: rgba(0,0,0,0.6);
+          color: #fff; font-size: 9px; line-height: 14px; text-align: center;
+          cursor: pointer; opacity: 0; transition: opacity 0.15s;
+          border: none; padding: 0;
+        }
+        .ce-thumb:hover .ce-thumb-delete,
+        .ce-thumb:hover .ce-thumb-edit { opacity: 1; }
+        /* Mobile: always show controls since there's no hover */
+        @media (hover: none) {
+          .ce-thumb-delete, .ce-thumb-edit { opacity: 0.85; }
+        }
 
         .ce-add-thumb {
           width: 48px; height: 64px; border: 1px dashed var(--rule);
@@ -465,13 +540,15 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle, canEdit = t
           font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.1em;
           text-transform: uppercase; color: var(--muted); min-width: 70px;
         }
+        /* Native slider — the browser handles touch targets properly on
+           iOS and Android; accent-color recolors the track+thumb without
+           stripping the built-in touch behavior. */
         .edit-slider {
-          flex: 1; -webkit-appearance: none; appearance: none;
-          height: 1px; background: var(--rule); outline: none;
-        }
-        .edit-slider::-webkit-slider-thumb {
-          -webkit-appearance: none; width: 12px; height: 12px;
-          border-radius: 50%; background: var(--coral); cursor: pointer;
+          flex: 1;
+          accent-color: var(--coral);
+          height: 32px;
+          touch-action: pan-x;
+          cursor: pointer;
         }
         .edit-slider-val {
           font-family: var(--mono); font-size: 0.55rem; color: var(--muted);
@@ -511,10 +588,15 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle, canEdit = t
       `}</style>
 
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileSelect} />
-      <input ref={uploadRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileSelect} />
+      <input ref={uploadRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleFileSelect} />
       <input ref={scanCameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleScanFileSelect} />
 
-      {scanning && scanSrc ? (
+      {liveScanning ? (
+        <LiveScanTool
+          onComplete={handleLiveScanComplete}
+          onCancel={handleLiveScanCancel}
+        />
+      ) : scanning && scanSrc ? (
         <ScanTool
           imageSrc={scanSrc}
           onComplete={handleScanComplete}
@@ -578,21 +660,25 @@ export default function CoverEditor({ bookId, initialUrl, bookTitle, canEdit = t
                 <div key={img.id} className={`ce-thumb${i === activeIndex ? ' active' : ''}`} onClick={() => setActiveIndex(i)}>
                   <img src={img.image_url} alt="" />
                   {canEdit && img.id !== 'legacy' && (
-                    <button className="ce-thumb-delete" onClick={e => { e.stopPropagation(); handleDelete(img.id) }}>×</button>
+                    <>
+                      <button className="ce-thumb-edit" title="Edit photo" onClick={e => { e.stopPropagation(); handleEditExisting(img) }}>✎</button>
+                      <button className="ce-thumb-delete" onClick={e => { e.stopPropagation(); handleDelete(img.id) }}>×</button>
+                    </>
                   )}
                 </div>
               ))}
               {canAdd && (
-                <button className="ce-add-thumb" onClick={() => {}} title="Add photo">+</button>
+                <button className="ce-add-thumb" onClick={() => uploadRef.current?.click()} title="Add photo(s)">+</button>
               )}
             </div>
           )}
 
           {canAdd && (
             <div className="ce-add-buttons">
+              <button className="ce-btn ce-btn-primary" onClick={() => setLiveScanning(true)}>Live Scan</button>
               <button className="ce-btn ce-btn-secondary" onClick={() => cameraRef.current?.click()}>Take Photo</button>
               <button className="ce-btn ce-btn-secondary" onClick={() => uploadRef.current?.click()}>Upload Photo</button>
-              <button className="ce-btn ce-btn-primary" onClick={() => scanCameraRef.current?.click()}>Scan Cover</button>
+              <button className="ce-btn ce-btn-secondary" onClick={() => scanCameraRef.current?.click()}>Scan (Photo)</button>
             </div>
           )}
 

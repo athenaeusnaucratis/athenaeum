@@ -1,7 +1,8 @@
-import { getBookById, getBookTags, getBookCollections, getBooksByAuthor } from '@/lib/books'
+import { getBookById, getBookClasses, getBookCuisines, getBookCollections, getBooksByAuthor, getBookSourcePrices } from '@/lib/books'
 import { supabase } from '@/lib/supabase'
 import PageShell from '@/app/components/PageShell'
-import TagPicker from '@/app/components/TagPicker'
+import ClassificationPicker from '@/app/components/ClassificationPicker'
+import CuisinePicker from '@/app/components/CuisinePicker'
 import ReadStatusPicker from '@/app/components/ReadStatusPicker'
 import BookEditor from '@/app/components/BookEditor'
 import ValuePanel from '@/app/components/ValuePanel'
@@ -17,10 +18,12 @@ import { getSession } from '@/lib/supabase-server'
 export default async function BookPage({ params }) {
   const { id } = await params
   const user = await getSession()
-  const [{ data: book, error }, { data: bookTags }, { data: bookCollections }] = await Promise.all([
+  const [{ data: book, error }, { data: bookClasses }, { data: bookCuisines }, { data: bookCollections }, { data: sourcePrices }] = await Promise.all([
     getBookById(id),
-    getBookTags(id),
+    getBookClasses(id),
+    getBookCuisines(id),
     getBookCollections(id),
+    getBookSourcePrices(id),
   ])
 
   if (error || !book) return notFound()
@@ -36,12 +39,8 @@ export default async function BookPage({ params }) {
     .sort((a, b) => (a.chef_order ?? 999) - (b.chef_order ?? 999))
     .map(c => c.chefs)
     .filter(Boolean)
-  const restaurantList = (book.restaurants || [])
-    .slice()
-    .sort((a, b) => (a.restaurant_order ?? 999) - (b.restaurant_order ?? 999))
-    .map(r => r.restaurants)
-    .filter(Boolean)
   const publisher = book.publishers?.name || '—'
+  const publisherId = book.publishers?.id || null
 
   // Merge description + notes into one field
   const combinedDescription = [book.description, book.notes].filter(Boolean).join('\n\n')
@@ -758,11 +757,13 @@ export default async function BookPage({ params }) {
                 ))}
               </div>
             )}
-            {restaurantList.length > 0 && (
+            {book.translators && (
               <div className="author-line" style={{ marginTop: '0.6rem' }}>
-                <span className="author-label">restaurant{restaurantList.length > 1 ? 's' : ''}</span>
+                <span className="author-label">
+                  translator{book.translators.includes(',') ? 's' : ''}
+                </span>
                 <span style={{ fontFamily: 'var(--serif)', fontSize: '1.1rem', color: 'var(--ink)' }}>
-                  {restaurantList.map(r => `${r.name}${r.city ? ` (${r.city})` : ''}`).join(', ')}
+                  {book.translators}
                 </span>
               </div>
             )}
@@ -777,7 +778,11 @@ export default async function BookPage({ params }) {
             </div>
             <div className="meta-cell">
               <div className="meta-key">Publisher</div>
-              <div className="meta-val">{publisher}</div>
+              <div className="meta-val">
+                {publisherId
+                  ? <Link href={`/publishers/${publisherId}`} style={{ color: 'inherit', textDecoration: 'none', borderBottom: '1px dotted var(--rule)' }}>{publisher}</Link>
+                  : publisher}
+              </div>
             </div>
             <div className="meta-cell">
               <div className="meta-key">Language</div>
@@ -787,6 +792,14 @@ export default async function BookPage({ params }) {
                 ) : '—'}
               </div>
             </div>
+            {book.original_language && book.original_language !== book.language && (
+              <div className="meta-cell">
+                <div className="meta-key">Original Language</div>
+                <div className="meta-val">
+                  <Link href={`/language/${encodeURIComponent(book.original_language)}`} className="author-name-link">{book.original_language}</Link>
+                </div>
+              </div>
+            )}
             <div className="meta-cell">
               <div className="meta-key">ISBN</div>
               <div className="meta-val mono-val">{book.isbn_13 || book.isbn_10 || '—'}</div>
@@ -795,6 +808,12 @@ export default async function BookPage({ params }) {
               <div className="meta-key">Format</div>
               <div className="meta-val">{book.format ?? '—'}</div>
             </div>
+            {book.printing_number && (
+              <div className="meta-cell">
+                <div className="meta-key">Printing</div>
+                <div className="meta-val">{book.printing_number}</div>
+              </div>
+            )}
             <div className="meta-cell">
               <div className="meta-key">Pages</div>
               <div className="meta-val">{book.page_count ?? '—'}</div>
@@ -807,12 +826,24 @@ export default async function BookPage({ params }) {
               <div className="meta-key">Country</div>
               <div className="meta-val">{book.country_of_origin ?? '—'}</div>
             </div>
-            {book.location && (
+            {book.editor && (
+              <div className="meta-cell">
+                <div className="meta-key">Editor</div>
+                <div className="meta-val">{book.editor}</div>
+              </div>
+            )}
+            {user && book.location && (
               <div className="meta-cell">
                 <div className="meta-key">Location</div>
                 <div className="meta-val">
                   <Link href={`/location/${encodeURIComponent(book.location)}`} className="author-name-link">{book.location}</Link>
                 </div>
+              </div>
+            )}
+            {book.text_by && (
+              <div className="meta-cell">
+                <div className="meta-key">Text</div>
+                <div className="meta-val">{book.text_by}</div>
               </div>
             )}
             {book.photographer && (
@@ -821,10 +852,34 @@ export default async function BookPage({ params }) {
                 <div className="meta-val">{book.photographer}</div>
               </div>
             )}
+            {book.cover_photographer && (
+              <div className="meta-cell">
+                <div className="meta-key">Cover Photo</div>
+                <div className="meta-val">{book.cover_photographer}</div>
+              </div>
+            )}
+            {book.food_stylist && (
+              <div className="meta-cell">
+                <div className="meta-key">Food Stylist</div>
+                <div className="meta-val">{book.food_stylist}</div>
+              </div>
+            )}
             {book.designer && (
               <div className="meta-cell">
                 <div className="meta-key">Design</div>
                 <div className="meta-val">{book.designer}</div>
+              </div>
+            )}
+            {book.cover_designer && (
+              <div className="meta-cell">
+                <div className="meta-key">Cover Design</div>
+                <div className="meta-val">{book.cover_designer}</div>
+              </div>
+            )}
+            {book.art_director && (
+              <div className="meta-cell">
+                <div className="meta-key">Art Director</div>
+                <div className="meta-val">{book.art_director}</div>
               </div>
             )}
             {book.illustrator && (
@@ -838,14 +893,15 @@ export default async function BookPage({ params }) {
           </div>
 
           <div className="sections-wrap">
-            <ValuePanel bookId={id} currentValue={book.estimated_value_usd} lastChecked={book.value_last_checked} bookTitle={book.title} isbn={book.isbn_13 || book.isbn_10} language={book.language} canEdit={!!user} />
+            <ValuePanel bookId={id} currentValue={book.estimated_value_usd} lastChecked={book.value_last_checked} bookTitle={book.title} isbn={book.isbn_13 || book.isbn_10} language={book.language} canEdit={!!user} initialSources={sourcePrices} />
             {user && (
               <>
                 <ReadStatusPicker bookId={id} initialStatus={book.read_status} />
                 <MetadataRefresh bookId={id} />
                 <CollectionPicker bookId={id} initialCollections={bookCollections} />
-                <TagPicker bookId={id} initialTags={bookTags} />
-                <BookEditor book={book} authors={authorList} chefs={chefList} restaurants={restaurantList} publisher={publisher} />
+                <ClassificationPicker bookId={id} initialClasses={bookClasses} />
+                <CuisinePicker bookId={id} initialCuisines={bookCuisines} />
+                <BookEditor book={book} authors={authorList} chefs={chefList} publisher={publisher} />
                 <DeleteBook bookId={id} />
               </>
             )}

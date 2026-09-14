@@ -21,8 +21,23 @@ const jost = Jost({
 });
 
 export const metadata = {
-  title: "Athenaeum Deipnon",
-  description: "Personal cookbook library",
+  metadataBase: new URL("https://www.athenaeum-deipnon.com"),
+  title: {
+    default: "Athenaeum Deipnon — A Personal Cookbook Library",
+    template: "%s · Athenaeum Deipnon",
+  },
+  description:
+    "A curated cookbook library — browse 200+ cookbooks by author, chef, category, language, and collection. Rare, out-of-print, and international titles.",
+  keywords: [
+    "cookbook library",
+    "cookbook catalog",
+    "rare cookbooks",
+    "vintage cookbooks",
+    "cookbook collection",
+    "chef biography",
+    "Athenaeum Deipnon",
+  ],
+  authors: [{ name: "Athenaeum Deipnon" }],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -30,6 +45,24 @@ export const metadata = {
     title: "Athenaeum Deipnon",
   },
   themeColor: "#111009",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+  openGraph: {
+    type: "website",
+    url: "https://www.athenaeum-deipnon.com",
+    siteName: "Athenaeum Deipnon",
+    title: "Athenaeum Deipnon — A Personal Cookbook Library",
+    description:
+      "A curated cookbook library — browse cookbooks by author, chef, category, language, and collection.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Athenaeum Deipnon",
+    description: "A curated cookbook library.",
+  },
 };
 
 export default function RootLayout({ children }) {

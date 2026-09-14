@@ -1,7 +1,8 @@
 import { supabase } from '@/lib/supabase'
 import PageShell from '@/app/components/PageShell'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { getSession } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,8 @@ const LOCATION_LABEL = {
 
 export default async function LocationDetailPage({ params }) {
   const { loc } = await params
+  const user = await getSession()
+  if (!user) redirect('/login')
   const code = decodeURIComponent(loc)
   const label = LOCATION_LABEL[code] || code
 

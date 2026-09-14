@@ -2,7 +2,7 @@
 
 A personal cookbook library — cataloging, valuation, and browsing built for a growing collection of 2,000+ cookbooks, many of them out-of-print, non-English, or without ISBNs.
 
-**Live:** [athenaeum-eta.vercel.app](https://athenaeum-eta.vercel.app)
+**Live:** [athenaeum-deipnon.com](https://www.athenaeum-deipnon.com)
 
 Public visitors can browse everything read-only. Editing is restricted to the admin account.
 

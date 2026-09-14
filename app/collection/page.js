@@ -19,11 +19,12 @@ export default async function CollectionPage() {
       isbn_13,
       isbn_10,
       cover_image_url,
+      created_at,
       authors:book_authors(
         authors(full_name)
       )
     `)
-    .order('title')
+    .order('created_at', { ascending: false })
 
   if (error) return <p style={{ padding: '2rem', color: 'red' }}>Error: {error.message}</p>
 
@@ -41,7 +42,7 @@ export default async function CollectionPage() {
             letterSpacing: '0.1em',
             marginTop: '0.8rem'
           }}>
-            {books.length} volumes · sorted by title
+            {books.length} volumes · most recent first
           </div>
         </div>
       </div>

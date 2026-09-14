@@ -1,5 +1,5 @@
 import { addValueRecord, getValueHistory } from '@/lib/books'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { lookupBookPrice } from '@/lib/pricing'
 
 export async function GET(request, { params }) {
@@ -37,7 +37,24 @@ export async function POST(request, { params }) {
     })
 
     if (result) {
-      const { error } = await addValueRecord(id, result.value, result.source)
+      // Persist per-source snapshot so the book page shows the breakdown without re-fetching.
+      // Delete stale sources for this book first, then upsert current ones.
+      await supabaseAdmin.from('book_source_prices').delete().eq('book_id', id)
+      if (Array.isArray(result.sources) && result.sources.length) {
+        await supabaseAdmin.from('book_source_prices').insert(
+          result.sources.map(s => ({
+            book_id: id,
+            source: s.name,
+            value_usd: s.value,
+            listings: s.listings ?? null,
+            low_usd: s.low ?? null,
+            high_usd: s.high ?? null,
+            note: s.note ?? null,
+          }))
+        )
+      }
+      // Aggregate value (median across sources) still populates books.estimated_value_usd.
+      const { error } = await addValueRecord(id, result.median ?? result.value, result.source)
       if (error) return Response.json({ error: error.message }, { status: 500 })
       return Response.json(result)
     }

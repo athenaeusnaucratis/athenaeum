@@ -155,12 +155,13 @@ export default async function PageShell({ active, children }) {
         }
 
         @media (max-width: 768px) {
-          .nav-bar { padding: 0 1.25rem; }
-          .nav-links { gap: 1.2rem; }
+          .nav-bar { padding: 0 1rem; gap: 0.7rem; }
+          .nav-links { gap: 1rem; }
           .page-header { padding: 2.5rem 1.25rem 2rem; }
           .page-content { padding: 0 1.25rem 3rem; }
           .page-title { font-size: 2rem; }
-          .nav-add { display: none; }
+          /* Keep +ADD visible on mobile, but tighter */
+          .nav-add { padding: 0.35rem 0.7rem; font-size: 0.62rem; letter-spacing: 0.06em; }
         }
       `}</style>
 

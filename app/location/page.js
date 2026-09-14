@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase'
 import PageShell from '@/app/components/PageShell'
 import Link from 'next/link'
+import { getSession } from '@/lib/supabase-server'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +12,8 @@ const LOCATION_LABEL = {
 }
 
 export default async function LocationPage() {
+  const user = await getSession()
+  if (!user) redirect('/login')
   const { data: books } = await supabase
     .from('books')
     .select('id, title, location, cover_image_url, estimated_value_usd')

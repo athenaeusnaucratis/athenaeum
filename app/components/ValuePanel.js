@@ -40,11 +40,27 @@ function buildSearchLinks(title, isbn) {
   return links
 }
 
-export default function ValuePanel({ bookId, currentValue, lastChecked, bookTitle, isbn, language, canEdit = true }) {
+const SOURCE_LABELS = {
+  ebay_sold: 'eBay (sold)',
+  ebay_active: 'eBay',
+  abebooks: 'AbeBooks',
+  biblio: 'Biblio',
+  google_books: 'Google Books',
+  isbndb_msrp: 'ISBNdb (MSRP)',
+  ai_estimate: 'AI Estimate',
+  manual: 'Manual entry',
+}
+
+function sourceLabel(name) {
+  return SOURCE_LABELS[name] || name.replace(/_/g, ' ')
+}
+
+export default function ValuePanel({ bookId, currentValue, lastChecked, bookTitle, isbn, language, canEdit = true, initialSources }) {
   const router = useRouter()
   const [history, setHistory] = useState(null)
   const [showHistory, setShowHistory] = useState(false)
   const [looking, setLooking] = useState(false)
+  const [sources, setSources] = useState(initialSources ?? [])
   const [manualValue, setManualValue] = useState('')
   const [currency, setCurrency] = useState(
     language === 'Turkish' ? 'TRY' :
@@ -78,11 +94,19 @@ export default function ValuePanel({ bookId, currentValue, lastChecked, bookTitl
     const data = await res.json()
     setLooking(false)
     if (data.value) {
-      let msg = `$${Number(data.value).toFixed(2)} (${data.source})`
-      if (data.listings) {
-        msg += ` — ${data.listings} listings, $${Number(data.low).toFixed(2)}–$${Number(data.high).toFixed(2)}`
+      // Sync per-source rows from the response (server also persisted them)
+      if (Array.isArray(data.sources)) {
+        setSources(data.sources.map(s => ({
+          source: s.name,
+          value_usd: s.value,
+          listings: s.listings ?? null,
+          low_usd: s.low ?? null,
+          high_usd: s.high ?? null,
+          note: s.note ?? null,
+        })))
       }
-      setMessage(msg)
+      const median = data.median ?? data.value
+      setMessage(`Median $${Number(median).toFixed(2)} across ${data.sourceCount ?? data.sources?.length ?? 1} source${(data.sourceCount ?? 1) === 1 ? '' : 's'}`)
       router.refresh()
       if (showHistory) loadHistory()
     } else {
@@ -154,6 +178,37 @@ export default function ValuePanel({ bookId, currentValue, lastChecked, bookTitl
           font-family: var(--mono); font-size: 0.6rem;
           color: var(--coral); margin-top: 0.3rem;
         }
+        .vp-sources {
+          margin-top: 1.1rem; padding-top: 0.9rem;
+          border-top: 1px solid var(--rule);
+          display: flex; flex-direction: column;
+        }
+        .vp-source-row {
+          display: grid; grid-template-columns: 130px 70px 1fr;
+          gap: 0.6rem; align-items: baseline;
+          padding: 0.4rem 0;
+          border-bottom: 1px dashed var(--rule);
+        }
+        .vp-source-row:last-child { border-bottom: none; }
+        .vp-source-name {
+          font-family: var(--mono); font-size: 0.62rem;
+          letter-spacing: 0.08em; text-transform: uppercase;
+          color: var(--muted);
+        }
+        .vp-source-value {
+          font-family: var(--serif); font-size: 1rem;
+          color: var(--ink); font-weight: 400;
+        }
+        .vp-source-meta {
+          font-family: var(--mono); font-size: 0.58rem;
+          color: var(--muted); letter-spacing: 0.04em;
+        }
+        .vp-source-range { color: var(--rule); }
+        .vp-source-note { font-style: italic; }
+        @media (max-width: 520px) {
+          .vp-source-row { grid-template-columns: 1fr auto; }
+          .vp-source-meta { grid-column: 1 / -1; }
+        }
       `}</style>
 
       <p className="vp-label">Market Value</p>
@@ -163,10 +218,33 @@ export default function ValuePanel({ bookId, currentValue, lastChecked, bookTitl
           ? <span className="vp-amount">${Number(currentValue).toFixed(2)}</span>
           : <span className="vp-no-value">Not set</span>
         }
+        {sources.length > 0 && (
+          <span className="vp-checked">Median across {sources.length} source{sources.length === 1 ? '' : 's'}</span>
+        )}
         {lastChecked && (
           <span className="vp-checked">Last checked {new Date(lastChecked).toLocaleDateString()}</span>
         )}
       </div>
+
+      {sources.length > 0 && (
+        <div className="vp-sources">
+          {sources.map(s => (
+            <div key={s.source} className="vp-source-row">
+              <span className="vp-source-name">{sourceLabel(s.source)}</span>
+              <span className="vp-source-value">${Number(s.value_usd).toFixed(2)}</span>
+              <span className="vp-source-meta">
+                {s.listings ? `${s.listings} listing${s.listings === 1 ? '' : 's'}` : ''}
+                {(s.low_usd != null && s.high_usd != null) && (
+                  <span className="vp-source-range">
+                    {s.listings ? ' · ' : ''}${Number(s.low_usd).toFixed(2)}–${Number(s.high_usd).toFixed(2)}
+                  </span>
+                )}
+                {s.note && !s.listings && <span className="vp-source-note">{s.note}</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="vp-actions">
         {canEdit && (
