@@ -170,11 +170,12 @@ export default function AboutPage() {
         <ul>
           <li>
             <strong>Classification.</strong> Books are organised in a four-level
-            custom taxonomy — <em>Gastronomy → Culinary Literature → nine genres
+            taxonomy adopted from a separate project I&rsquo;m developing on
+            <strong> Culinary Literature Methodology</strong> — <em>Gastronomy → Culinary Literature → nine genres</em>
             (Cookbooks, Gastronomic Writing, Technical / Professional Manuals,
             Culinary History and Scholarship, Food Memoir, Reference Works, Trade
             and Industry Literature, Periodicals, Beverage Literature) → forty-five
-            subcategories</em>. Every class is addressable by a stable notation
+            subcategories. Every class is addressable by a stable notation
             (e.g. <code>1.1.1.2</code> is <em>Cookbooks → Cuisine / Regional</em>).
             A book can hold more than one assignment — a chef monograph that also
             documents a regional cuisine, say — with one marked as the primary
