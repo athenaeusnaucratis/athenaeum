@@ -157,11 +157,6 @@ export default function AboutPage() {
           Where a cover has visible wear, that&rsquo;s the wear on my book. Where a
           jacket is missing, mine is missing too.
         </p>
-        <p>
-          Location, condition, and value fields exist for my own record-keeping.
-          Some are hidden from public visitors; some (like the running total of the
-          collection&rsquo;s estimated value) are shown only when I&rsquo;m signed in.
-        </p>
       </section>
 
       <section id="methodology" className="about-section">
@@ -173,6 +168,21 @@ export default function AboutPage() {
           produce when I ask them to fill gaps. It is not authoritative.
         </p>
         <ul>
+          <li>
+            <strong>Classification.</strong> Books are organised in a four-level
+            custom taxonomy — <em>Gastronomy → Culinary Literature → nine genres
+            (Cookbooks, Gastronomic Writing, Technical / Professional Manuals,
+            Culinary History and Scholarship, Food Memoir, Reference Works, Trade
+            and Industry Literature, Periodicals, Beverage Literature) → forty-five
+            subcategories</em>. Every class is addressable by a stable notation
+            (e.g. <code>1.1.1.2</code> is <em>Cookbooks → Cuisine / Regional</em>).
+            A book can hold more than one assignment — a chef monograph that also
+            documents a regional cuisine, say — with one marked as the primary
+            class. Regional cuisines live on a separate axis rather than inside
+            the tree, so a book can be both <em>1.1.1.9 Chef / Restaurant</em> and
+            <em> French</em>. The full tree, with a scope note under each entry, is
+            browsable at <a href="/genre">/genre</a>.
+          </li>
           <li>
             <strong>Market values</strong> are looked up on demand from
             <em> eBay</em> (completed sales), <em>AbeBooks</em>, <em>Biblio</em>,
