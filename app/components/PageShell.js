@@ -1,4 +1,5 @@
 import Nav from './Nav'
+import Footer from './Footer'
 import { getSession } from '@/lib/supabase-server'
 
 export default async function PageShell({ active, children }) {
@@ -168,6 +169,7 @@ export default async function PageShell({ active, children }) {
       <div className="page">
         <Nav active={active} user={user} />
         {children}
+        <Footer />
       </div>
     </>
   )
