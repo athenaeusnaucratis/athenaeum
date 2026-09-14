@@ -61,8 +61,11 @@ export default async function BookPage({ params }) {
     }
   }
 
-  // Build tags for eyebrow
-  const tagNames = bookTags?.map(bt => bt.tags?.name).filter(Boolean) || []
+  // Build classification eyebrow: primary class first, then any others
+  const classNames = (bookClasses || [])
+    .slice()
+    .sort((a, b) => (b.is_primary === a.is_primary ? 0 : b.is_primary ? 1 : -1))
+    .map(c => c.name)
 
   return (
     <PageShell active="/collection">
@@ -728,8 +731,8 @@ export default async function BookPage({ params }) {
         {/* RIGHT: INFO */}
         <div className="info-col">
           <div className="title-block">
-            {tagNames.length > 0 && (
-              <div className="title-eyebrow">{tagNames.join(' · ')}</div>
+            {classNames.length > 0 && (
+              <div className="title-eyebrow">{classNames.join(' · ')}</div>
             )}
             <h1 className="book-title-main">{book.title}</h1>
             {book.subtitle && <p className="book-subtitle-main">{book.subtitle}</p>}
