@@ -20,6 +20,10 @@ const jost = Jost({
   weight: ["200", "300", "400"],
 });
 
+export const viewport = {
+  themeColor: "#111009",
+}
+
 export const metadata = {
   metadataBase: new URL("https://www.athenaeum-deipnon.com"),
   title: {
@@ -44,7 +48,6 @@ export const metadata = {
     statusBarStyle: "default",
     title: "Athenaeum Deipnon",
   },
-  themeColor: "#111009",
   robots: {
     index: true,
     follow: true,
