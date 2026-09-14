@@ -3,7 +3,7 @@ import PageShell from '@/app/components/PageShell'
 import Link from 'next/link'
 import { getSession } from '@/lib/supabase-server'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 export default async function ChefsPage() {
   const user = await getSession()

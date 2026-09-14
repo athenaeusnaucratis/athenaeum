@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 import PageShell from '@/app/components/PageShell'
 import Link from 'next/link'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 export default async function PublishersPage() {
   const { data: publishers } = await supabase

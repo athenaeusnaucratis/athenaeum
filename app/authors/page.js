@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 import PageShell from '@/app/components/PageShell'
 import AuthorList from '@/app/components/AuthorList'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 export default async function AuthorsPage() {
   // Get all authors with their book counts and a notable book title

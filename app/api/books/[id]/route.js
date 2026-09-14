@@ -42,23 +42,6 @@ async function resolveChefId(name) {
   return created?.id ?? null
 }
 
-async function resolveRestaurantId(name) {
-  const trimmed = name.trim()
-  if (!trimmed) return null
-  const { data: existing } = await supabaseAdmin
-    .from('restaurants')
-    .select('id')
-    .ilike('name', trimmed)
-    .maybeSingle()
-  if (existing) return existing.id
-  const { data: created } = await supabaseAdmin
-    .from('restaurants')
-    .insert({ name: trimmed })
-    .select('id')
-    .single()
-  return created?.id ?? null
-}
-
 export async function PATCH(request, { params }) {
   const { id } = await params
   const fields = await request.json()
@@ -120,20 +103,6 @@ export async function PATCH(request, { params }) {
       if (chef_id) {
         await supabaseAdmin.from('book_chefs').insert({
           book_id: id, chef_id, chef_order: i + 1,
-        })
-      }
-    }
-  }
-
-  // Handle restaurants (array of names)
-  if (Array.isArray(fields.restaurants)) {
-    const names = fields.restaurants.map(a => (a || '').trim()).filter(Boolean)
-    await supabaseAdmin.from('book_restaurants').delete().eq('book_id', id)
-    for (let i = 0; i < names.length; i++) {
-      const restaurant_id = await resolveRestaurantId(names[i])
-      if (restaurant_id) {
-        await supabaseAdmin.from('book_restaurants').insert({
-          book_id: id, restaurant_id, restaurant_order: i + 1,
         })
       }
     }
