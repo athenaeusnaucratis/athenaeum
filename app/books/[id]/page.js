@@ -11,6 +11,7 @@ import CoverEditor from '@/app/components/CoverEditor'
 import EditableDescription from '@/app/components/EditableDescription'
 import DeleteBook from '@/app/components/DeleteBook'
 import MetadataRefresh from '@/app/components/MetadataRefresh'
+import CopyrightPageScanner from '@/app/components/CopyrightPageScanner'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getSession } from '@/lib/supabase-server'
@@ -901,6 +902,7 @@ export default async function BookPage({ params }) {
               <>
                 <ReadStatusPicker bookId={id} initialStatus={book.read_status} />
                 <MetadataRefresh bookId={id} />
+                <CopyrightPageScanner book={book} publisher={publisher} />
                 <CollectionPicker bookId={id} initialCollections={bookCollections} />
                 <ClassificationPicker bookId={id} initialClasses={bookClasses} />
                 <CuisinePicker bookId={id} initialCuisines={bookCuisines} />
