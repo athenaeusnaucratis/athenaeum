@@ -114,6 +114,7 @@ export async function PATCH(request, { params }) {
   const asText = v => v !== undefined ? (v || null) : undefined
   const asInt = v => v !== undefined ? (v ? parseInt(v) : null) : undefined
   const asFloat = v => v !== undefined ? (v ? parseFloat(v) : null) : undefined
+  const asBool = v => v !== undefined ? !!v : undefined
 
   const update = {
     title: fields.title || undefined, // never null title
@@ -138,6 +139,8 @@ export async function PATCH(request, { params }) {
     cover_designer: asText(fields.cover_designer),
     art_director: asText(fields.art_director),
     text_by: asText(fields.text_by),
+    is_signed: asBool(fields.is_signed),
+    signed_notes: asText(fields.signed_notes),
     original_language: asText(fields.original_language),
     translators: asText(fields.translators),
     dimensions: asText(fields.dimensions),

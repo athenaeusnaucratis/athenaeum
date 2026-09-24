@@ -850,6 +850,14 @@ export default async function BookPage({ params }) {
                 <div className="meta-val">{book.text_by}</div>
               </div>
             )}
+            {book.is_signed && (
+              <div className="meta-cell">
+                <div className="meta-key">Signed</div>
+                <div className="meta-val" style={{ color: 'var(--coral)' }}>
+                  ✎ {book.signed_notes || 'Signed copy'}
+                </div>
+              </div>
+            )}
             {book.photographer && (
               <div className="meta-cell">
                 <div className="meta-key">Photography</div>

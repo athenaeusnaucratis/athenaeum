@@ -9,6 +9,7 @@ const COPYRIGHT_SCHEMA = `{
   "isbn_13": null,
   "isbn_10": null,
   "publisher": null,
+  "country_of_origin": null,
   "publication_year": null,
   "edition": null,
   "printing_number": null,
@@ -105,6 +106,7 @@ Rules — READ CAREFULLY:
 - edition: "First Edition", "Revised Edition", "10th Anniversary Edition", "Second Edition", etc. Only if explicitly stated.
 - printing_number: the printing statement ("2nd printing" → "2nd"; "First edition, third printing" → "3rd"; a bare row of numbers "10 9 8 7 6 5" means the printing is the lowest number shown, so "5"). Keep as short text.
 - publisher: the imprint / publishing house name only (e.g. "Ten Speed Press"). Do not include city or LLC/Ltd suffix if separable.
+- country_of_origin: the country where the book was printed or published. Common sources: an explicit "Printed in <country>" line ("Printed in the United States of America" → "United States"; "Printed in China" → "China"; "Imprimé en France" → "France"), the country in the publisher's address (e.g. "New York, NY" → "United States"; "London" → "United Kingdom"; "Istanbul" → "Turkey"), or the country code in the CIP data. Full country name in English ("United States", "United Kingdom", "France", "Turkey", "Germany", "Italy", "Japan", "China"). Leave null if the page shows no country signal.
 - language: full English name of the book's primary language.
 - original_language: if this is a translation, the language of the original. Otherwise null.
 - translators: full name(s) of translator(s), comma-separated if more than one.
@@ -147,6 +149,7 @@ ${COPYRIGHT_SCHEMA}`
       isbn_13: rawIsbn13.length === 13 ? rawIsbn13 : null,
       isbn_10: rawIsbn10.length === 10 ? rawIsbn10 : null,
       publisher: extracted.publisher || null,
+      country_of_origin: extracted.country_of_origin || null,
       publication_year: parseYear(extracted.publication_year),
       edition: extracted.edition || null,
       printing_number: extracted.printing_number || null,

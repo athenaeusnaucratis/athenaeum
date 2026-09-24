@@ -78,6 +78,8 @@ export default function BookEditor({ book, authors, publisher, chefs, restaurant
     cover_image_url: book.cover_image_url ?? '',
     description: book.description ?? '',
     publisher: typeof publisher === 'string' && publisher !== '—' ? publisher : '',
+    is_signed: !!book.is_signed,
+    signed_notes: book.signed_notes ?? '',
   })
   const [authorList, setAuthorList] = useState(initialAuthors.length ? initialAuthors : [''])
   const [chefList, setChefList] = useState(initialChefs.length ? initialChefs : [''])
@@ -182,6 +184,8 @@ export default function BookEditor({ book, authors, publisher, chefs, restaurant
       cover_image_url: book.cover_image_url ?? '',
       description: book.description ?? '',
       publisher: typeof publisher === 'string' && publisher !== '—' ? publisher : '',
+      is_signed: !!book.is_signed,
+      signed_notes: book.signed_notes ?? '',
     })
     setAuthorList(initialAuthors.length ? initialAuthors : [''])
     setChefList(initialChefs.length ? initialChefs : [''])
@@ -306,6 +310,26 @@ export default function BookEditor({ book, authors, publisher, chefs, restaurant
             value={form.publisher}
             onChange={e => setForm(p => ({ ...p, publisher: e.target.value }))}
           />
+        </div>
+        <div className="editor-field full">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={!!form.is_signed}
+              onChange={e => setForm(p => ({ ...p, is_signed: e.target.checked }))}
+              style={{ accentColor: 'var(--coral)', width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <span>Signed copy</span>
+          </label>
+          {form.is_signed && (
+            <input
+              type="text"
+              placeholder="Signed by whom? / where? (optional, e.g. 'Signed by author, title page, 2018')"
+              value={form.signed_notes}
+              onChange={e => setForm(p => ({ ...p, signed_notes: e.target.value }))}
+              style={{ marginTop: '0.5rem' }}
+            />
+          )}
         </div>
       </div>
       <div className="editor-field full">

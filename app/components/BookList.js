@@ -630,6 +630,35 @@ export default function BookList({ books }) {
         </div>
       )}
 
+      {/* TOP PAGINATION (mirror of bottom, only when there are multiple pages) */}
+      {totalPages > 1 && (
+        <div className="pagination pagination-top">
+          <span className="pagination-info">
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sorted.length)} of {sorted.length}
+          </span>
+          <div className="pagination-controls">
+            <button
+              className="page-btn nav-arrow"
+              disabled={page === 1}
+              onClick={() => setPage(p => p - 1)}
+            >←</button>
+            {pageButtons.map(p => (
+              <button
+                key={p}
+                className={`page-btn${page === p ? ' active' : ''}`}
+                onClick={() => setPage(p)}
+              >{p}</button>
+            ))}
+            {totalPages > 7 && <span style={{ color: 'var(--muted)', padding: '0 0.3rem' }}>…</span>}
+            <button
+              className="page-btn nav-arrow"
+              disabled={page === totalPages}
+              onClick={() => setPage(p => p + 1)}
+            >→</button>
+          </div>
+        </div>
+      )}
+
       {/* GRID VIEW */}
       {viewMode === 'grid' ? (
         <div className="books-grid">
